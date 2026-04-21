@@ -5,43 +5,98 @@
   <title>Skebob Robotec — Plane Tracker</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0d0d0d; color: #e0e0e0; font-family: monospace; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
-    h1 { margin-bottom: 16px; font-size: 1.2rem; letter-spacing: 2px; color: #00ff88; }
+    body { background: #0d0d0d; color: #e0e0e0; font-family: monospace; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; gap: 14px; }
+    h1 { font-size: 1.2rem; letter-spacing: 2px; color: #00ff88; }
     #feed-container { position: relative; border: 2px solid #00ff88; border-radius: 4px; overflow: hidden; width: 640px; max-width: 100%; background: #111; }
     #feed { width: 100%; display: block; }
-    #status { margin-top: 10px; font-size: 0.85rem; color: #888; }
-    #status span { color: #00ff88; }
-    #error-msg { display: none; color: #ff4444; margin-top: 12px; font-size: 0.9rem; }
+    .controls { display: flex; gap: 12px; }
+    button {
+      padding: 10px 24px; font-family: monospace; font-size: 0.95rem;
+      border: 2px solid; border-radius: 4px; cursor: pointer; background: transparent;
+      transition: background 0.15s, color 0.15s;
+    }
+    #btn-lock { color: #00ff88; border-color: #00ff88; }
+    #btn-lock:hover, #btn-lock.active { background: #00ff88; color: #0d0d0d; }
+    #btn-reset { color: #ff4444; border-color: #ff4444; }
+    #btn-reset:hover { background: #ff4444; color: #0d0d0d; }
+
+    #state-badge {
+      padding: 4px 14px; border-radius: 3px; font-size: 0.8rem;
+      letter-spacing: 1px; font-weight: bold;
+      transition: background 0.3s, color 0.3s;
+    }
+    .badge-idle     { background: #222; color: #888; }
+    .badge-locked   { background: #00ff88; color: #0d0d0d; }
+    .badge-searching{ background: #ffaa00; color: #0d0d0d; animation: pulse 0.8s infinite alternate; }
+    @keyframes pulse { from { opacity: 1; } to { opacity: 0.5; } }
+
+    #msg { font-size: 0.85rem; min-height: 1.2em; color: #ffaa00; }
+    #stream-line { font-size: 0.8rem; color: #555; }
   </style>
 </head>
 <body>
   <h1>SKEBOB ROBOTEC // PLANE TRACKER</h1>
 
   <div id="feed-container">
-    <img id="feed" src="/video" alt="camera feed"
-         onerror="showError()" onload="clearError()">
+    <img id="feed" src="/video" alt="camera feed" onerror="onStreamError()" onload="onStreamOk()">
   </div>
 
-  <p id="status">Stream: <span id="stream-state">connecting...</span></p>
-  <p id="error-msg">Camera stream lost. <a href="/" style="color:#ffaa00">Reload</a></p>
+  <div class="controls">
+    <button id="btn-lock" onclick="lockTarget()">Lock Target</button>
+    <span id="state-badge" class="badge-idle">IDLE</span>
+    <button id="btn-reset" onclick="resetTracker()">Reset</button>
+  </div>
+
+  <p id="msg"></p>
+  <p id="stream-line">Stream: <span id="stream-state">connecting...</span></p>
 
   <script>
-    const img = document.getElementById('feed');
-    const state = document.getElementById('stream-state');
-    const errMsg = document.getElementById('error-msg');
+    const badge = document.getElementById('state-badge');
+    const btnLock = document.getElementById('btn-lock');
+    const msg = document.getElementById('msg');
 
-    function clearError() {
-      state.textContent = 'live';
-      state.style.color = '#00ff88';
-      errMsg.style.display = 'none';
+    function onStreamOk() {
+      const el = document.getElementById('stream-state');
+      el.textContent = 'live'; el.style.color = '#00ff88';
+    }
+    function onStreamError() {
+      const el = document.getElementById('stream-state');
+      el.textContent = 'lost'; el.style.color = '#ff4444';
+      setTimeout(() => { document.getElementById('feed').src = '/video?' + Date.now(); }, 3000);
     }
 
-    function showError() {
-      state.textContent = 'lost';
-      state.style.color = '#ff4444';
-      errMsg.style.display = 'block';
-      // retry after 3s
-      setTimeout(() => { img.src = '/video?' + Date.now(); }, 3000);
+    function applyState(state) {
+      badge.className = 'badge-' + state;
+      badge.textContent = state.toUpperCase();
+      btnLock.classList.toggle('active', state === 'locked');
+      if (state === 'idle') msg.textContent = '';
+    }
+
+    // Poll /status every 400 ms
+    async function pollStatus() {
+      try {
+        const { state } = await fetch('/status').then(r => r.json());
+        applyState(state);
+        if (state === 'searching') msg.textContent = 'Target lost — searching...';
+        else if (state === 'locked') msg.textContent = 'Target locked.';
+      } catch (_) {}
+      setTimeout(pollStatus, 400);
+    }
+    pollStatus();
+
+    async function lockTarget() {
+      msg.textContent = 'Locking…';
+      const res = await fetch('/lock', { method: 'POST' });
+      if (!res.ok) { msg.textContent = 'Server error.'; return; }
+      // Wait briefly for capture loop to process
+      await new Promise(r => setTimeout(r, 400));
+      const { state } = await fetch('/status').then(r => r.json());
+      if (state !== 'locked') msg.textContent = 'No target visible — move object to centre first.';
+    }
+
+    async function resetTracker() {
+      await fetch('/reset', { method: 'POST' });
+      msg.textContent = 'Reset.';
     }
   </script>
 </body>
