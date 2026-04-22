@@ -2,96 +2,352 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Skebob Robotec — Plane Tracker</title>
+  <title>Skebob Robotec — Tracker</title>
   <style>
+    :root {
+      --green:  #00ff88;
+      --amber:  #ffaa00;
+      --red:    #ff4444;
+      --orange: #ff8800;
+      --bg:     #0d0d0d;
+      --panel:  #111418;
+      --border: #1e2a1e;
+      --dim:    #3a3a3a;
+      --text:   #c8d8c8;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0d0d0d; color: #e0e0e0; font-family: monospace; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; gap: 14px; }
-    h1 { font-size: 1.2rem; letter-spacing: 2px; color: #00ff88; }
-    #feed-container { position: relative; border: 2px solid #00ff88; border-radius: 4px; overflow: hidden; width: 640px; max-width: 100%; background: #111; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Courier New', monospace;
+      min-height: 100vh; padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border); padding-bottom: 10px;
+    }
+    .logo { color: var(--green); font-size: 1.1rem; letter-spacing: 3px; }
+    .logo span { color: var(--dim); font-size: 0.75rem; display: block; letter-spacing: 1px; }
+    .live-dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--green); display: inline-block; margin-right: 6px;
+      animation: blink 1.4s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+    .live-label { font-size: 0.75rem; color: var(--green); }
+
+    /* ── Main layout ── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      grid-template-rows: auto auto;
+      gap: 12px;
+    }
+
+    /* ── Feed ── */
+    .feed-wrap {
+      grid-row: 1 / 3;
+      border: 1px solid var(--border); border-radius: 4px;
+      overflow: hidden; background: #000; position: relative;
+    }
     #feed { width: 100%; display: block; }
-    .controls { display: flex; gap: 12px; }
-    button {
-      padding: 10px 24px; font-family: monospace; font-size: 0.95rem;
-      border: 2px solid; border-radius: 4px; cursor: pointer; background: transparent;
-      transition: background 0.15s, color 0.15s;
+    .feed-overlay {
+      position: absolute; bottom: 8px; left: 8px;
+      font-size: 0.7rem; color: rgba(0,255,136,.6);
+      pointer-events: none;
     }
-    #btn-lock { color: #00ff88; border-color: #00ff88; }
-    #btn-lock:hover, #btn-lock.active { background: #00ff88; color: #0d0d0d; }
-    #btn-reset { color: #ff4444; border-color: #ff4444; }
-    #btn-reset:hover { background: #ff4444; color: #0d0d0d; }
 
+    /* ── Panel base ── */
+    .panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 4px; padding: 12px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .panel-title {
+      font-size: 0.65rem; letter-spacing: 2px; color: var(--dim);
+      text-transform: uppercase; border-bottom: 1px solid var(--border); padding-bottom: 6px;
+    }
+
+    /* ── State badge ── */
     #state-badge {
-      padding: 4px 14px; border-radius: 3px; font-size: 0.8rem;
-      letter-spacing: 1px; font-weight: bold;
-      transition: background 0.3s, color 0.3s;
+      display: inline-block; padding: 3px 10px; border-radius: 2px;
+      font-size: 0.75rem; letter-spacing: 2px; font-weight: bold;
+      transition: background .3s, color .3s;
     }
-    .badge-idle     { background: #222; color: #888; }
-    .badge-locked   { background: #00ff88; color: #0d0d0d; }
-    .badge-searching{ background: #ffaa00; color: #0d0d0d; animation: pulse 0.8s infinite alternate; }
-    @keyframes pulse { from { opacity: 1; } to { opacity: 0.5; } }
+    .s-idle     { background: #1a1a1a; color: var(--dim); }
+    .s-locked   { background: var(--green); color: #000; }
+    .s-searching{ background: var(--amber); color: #000; animation: pulse .7s infinite alternate; }
+    @keyframes pulse { from{opacity:1} to{opacity:.5} }
 
-    #msg { font-size: 0.85rem; min-height: 1.2em; color: #ffaa00; }
-    #stream-line { font-size: 0.8rem; color: #555; }
+    /* ── Telemetry rows ── */
+    .tele-row { display: flex; justify-content: space-between; font-size: 0.8rem; }
+    .tele-label { color: var(--dim); }
+    .tele-val   { color: var(--green); font-weight: bold; }
+    .tele-val.warn { color: var(--amber); }
+    .tele-val.crit { color: var(--red);   }
+
+    /* ── Aim indicator canvas ── */
+    #aim-canvas { width: 100%; aspect-ratio: 1; border-radius: 3px; display: block; }
+
+    /* ── Error bars ── */
+    .bar-row { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; }
+    .bar-label { color: var(--dim); width: 30px; }
+    .bar-track {
+      flex: 1; height: 6px; background: #1a2a1a; border-radius: 3px; overflow: hidden; position: relative;
+    }
+    .bar-fill {
+      height: 100%; width: 0%; border-radius: 3px;
+      background: var(--green); transition: width .1s, background .2s;
+      position: absolute; top: 0;
+    }
+    .bar-val { color: var(--text); width: 40px; text-align: right; }
+
+    /* ── Controls ── */
+    .btn-row { display: flex; gap: 8px; }
+    button {
+      flex: 1; padding: 9px 0; font-family: inherit; font-size: 0.8rem;
+      letter-spacing: 1px; border: 1px solid; border-radius: 3px;
+      cursor: pointer; background: transparent; transition: background .15s, color .15s;
+      text-transform: uppercase;
+    }
+    #btn-lock { color: var(--green); border-color: var(--green); }
+    #btn-lock:hover, #btn-lock.active { background: var(--green); color: #000; }
+    #btn-reset { color: var(--red); border-color: var(--red); }
+    #btn-reset:hover { background: var(--red); color: #000; }
+
+    /* ── Controller diagram ── */
+    .wasd-grid {
+      display: grid; grid-template-columns: repeat(3,32px);
+      grid-template-rows: repeat(2,32px); gap: 4px;
+      justify-content: center;
+    }
+    .key {
+      background: #1a1a1a; border: 1px solid var(--border);
+      border-radius: 3px; display: flex; align-items: center;
+      justify-content: center; font-size: 0.75rem; color: var(--dim);
+    }
+    .key.center { grid-column: 2; }
+    .key-desc { font-size: 0.65rem; color: var(--dim); text-align: center; margin-top: 4px; }
+
+    /* ── System info ── */
+    .sys-row { font-size: 0.72rem; display: flex; justify-content: space-between; }
+    .sys-label { color: var(--dim); }
+    .sys-val   { color: var(--text); }
+
+    /* ── Message bar ── */
+    #msg-bar {
+      font-size: 0.75rem; color: var(--amber); min-height: 1.1em;
+      padding: 0 2px; letter-spacing: .5px;
+    }
   </style>
 </head>
 <body>
-  <h1>SKEBOB ROBOTEC // PLANE TRACKER</h1>
 
-  <div id="feed-container">
-    <img id="feed" src="/video" alt="camera feed" onerror="onStreamError()" onload="onStreamOk()">
+  <header>
+    <div class="logo">
+      SKEBOB ROBOTEC
+      <span>AERIAL TARGET TRACKER v0.3</span>
+    </div>
+    <div>
+      <span class="live-dot" id="live-dot"></span>
+      <span class="live-label" id="live-label">CONNECTING</span>
+    </div>
+  </header>
+
+  <div class="main-grid">
+
+    <!-- Feed -->
+    <div class="feed-wrap">
+      <img id="feed" src="/video" alt="feed"
+           onload="onStreamOk()" onerror="onStreamErr()">
+      <div class="feed-overlay" id="feed-overlay">640 × 480 · 30 fps</div>
+    </div>
+
+    <!-- Target info panel -->
+    <div class="panel">
+      <div class="panel-title">Target Status</div>
+
+      <div class="tele-row">
+        <span class="tele-label">STATE</span>
+        <span id="state-badge" class="s-idle">IDLE</span>
+      </div>
+      <div class="tele-row">
+        <span class="tele-label">POSITION</span>
+        <span class="tele-val" id="tele-pos">—</span>
+      </div>
+      <div class="tele-row">
+        <span class="tele-label">SIZE</span>
+        <span class="tele-val" id="tele-size">—</span>
+      </div>
+
+      <!-- Error bars -->
+      <div style="display:flex;flex-direction:column;gap:5px;margin-top:2px">
+        <div class="bar-row">
+          <span class="bar-label">PAN</span>
+          <div class="bar-track"><div class="bar-fill" id="bar-pan"></div></div>
+          <span class="bar-val" id="val-pan">0</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">TILT</span>
+          <div class="bar-track"><div class="bar-fill" id="bar-tilt"></div></div>
+          <span class="bar-val" id="val-tilt">0</span>
+        </div>
+      </div>
+
+      <!-- Aim indicator -->
+      <canvas id="aim-canvas" width="220" height="220"></canvas>
+    </div>
+
+    <!-- Bottom-right: controls + controller -->
+    <div style="display:flex;flex-direction:column;gap:12px;">
+
+      <!-- Controls panel -->
+      <div class="panel">
+        <div class="panel-title">Controls</div>
+        <div class="btn-row">
+          <button id="btn-lock" onclick="lockTarget()">Lock</button>
+          <button id="btn-reset" onclick="resetTracker()">Reset</button>
+        </div>
+        <div id="msg-bar"></div>
+      </div>
+
+      <!-- Controller panel -->
+      <div class="panel">
+        <div class="panel-title">Controller (future)</div>
+        <div class="wasd-grid">
+          <div class="key" style="grid-column:2">W</div>
+          <div class="key">A</div>
+          <div class="key">S</div>
+          <div class="key">D</div>
+        </div>
+        <div class="key-desc">Pan / Tilt manual override · not yet wired</div>
+        <div class="sys-row" style="margin-top:4px">
+          <span class="sys-label">Servo pan</span><span class="sys-val" id="sv-pan">— °</span>
+        </div>
+        <div class="sys-row">
+          <span class="sys-label">Servo tilt</span><span class="sys-val" id="sv-tilt">— °</span>
+        </div>
+      </div>
+
+      <!-- System panel -->
+      <div class="panel">
+        <div class="panel-title">System</div>
+        <div class="sys-row"><span class="sys-label">Resolution</span><span class="sys-val">640 × 480</span></div>
+        <div class="sys-row"><span class="sys-label">Camera</span><span class="sys-val">OV5647</span></div>
+        <div class="sys-row"><span class="sys-label">Detector</span><span class="sys-val">MOG2 + CSRT</span></div>
+        <div class="sys-row"><span class="sys-label">Poll rate</span><span class="sys-val">400 ms</span></div>
+        <div class="sys-row"><span class="sys-label">IP</span><span class="sys-val" id="sys-ip">—</span></div>
+      </div>
+
+    </div>
   </div>
-
-  <div class="controls">
-    <button id="btn-lock" onclick="lockTarget()">Lock Target</button>
-    <span id="state-badge" class="badge-idle">IDLE</span>
-    <button id="btn-reset" onclick="resetTracker()">Reset</button>
-  </div>
-
-  <p id="msg"></p>
-  <p id="stream-line">Stream: <span id="stream-state">connecting...</span></p>
 
   <script>
-    const badge = document.getElementById('state-badge');
-    const btnLock = document.getElementById('btn-lock');
-    const msg = document.getElementById('msg');
-
+    // ── Stream health ──────────────────────────────────────────────────────
     function onStreamOk() {
-      const el = document.getElementById('stream-state');
-      el.textContent = 'live'; el.style.color = '#00ff88';
+      document.getElementById('live-dot').style.background = 'var(--green)';
+      document.getElementById('live-label').textContent = 'LIVE';
     }
-    function onStreamError() {
-      const el = document.getElementById('stream-state');
-      el.textContent = 'lost'; el.style.color = '#ff4444';
+    function onStreamErr() {
+      document.getElementById('live-dot').style.background = 'var(--red)';
+      document.getElementById('live-label').textContent = 'LOST';
       setTimeout(() => { document.getElementById('feed').src = '/video?' + Date.now(); }, 3000);
     }
 
-    function applyState(state) {
-      badge.className = 'badge-' + state;
-      badge.textContent = state.toUpperCase();
-      btnLock.classList.toggle('active', state === 'locked');
-      if (state === 'idle') msg.textContent = '';
+    // ── Aim canvas ────────────────────────────────────────────────────────
+    const canvas = document.getElementById('aim-canvas');
+    const ctx = canvas.getContext('2d');
+    const CW = canvas.width, CH = canvas.height;
+
+    function drawAim(tx, ty, locked) {
+      ctx.clearRect(0, 0, CW, CH);
+
+      // Background grid
+      ctx.strokeStyle = '#1a2a1a'; ctx.lineWidth = 1;
+      for (let x = 0; x <= CW; x += CW/8) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,CH); ctx.stroke(); }
+      for (let y = 0; y <= CH; y += CH/8) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(CW,y); ctx.stroke(); }
+
+      // Centre crosshair
+      ctx.strokeStyle = '#2a4a2a'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(CW/2-16,CH/2); ctx.lineTo(CW/2+16,CH/2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(CW/2,CH/2-16); ctx.lineTo(CW/2,CH/2+16); ctx.stroke();
+
+      if (tx === 0 && ty === 0) return;
+
+      // Map from frame coords to canvas coords
+      const px = (tx / 640) * CW;
+      const py = (ty / 480) * CH;
+
+      // Line from centre to target
+      ctx.strokeStyle = locked ? 'rgba(255,136,0,.4)' : 'rgba(0,255,136,.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(CW/2, CH/2); ctx.lineTo(px, py); ctx.stroke();
+
+      // Target dot
+      ctx.fillStyle = locked ? '#ff8800' : '#00ff88';
+      ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI*2); ctx.fill();
+
+      // Reticle ring
+      ctx.strokeStyle = locked ? '#ff8800' : '#00ff88';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI*2); ctx.stroke();
+    }
+    drawAim(0, 0, false);
+
+    // ── Error bar helper ──────────────────────────────────────────────────
+    function setBar(fillId, valId, error, maxErr) {
+      const pct = Math.min(Math.abs(error) / maxErr * 100, 100);
+      const fill = document.getElementById(fillId);
+      const val  = document.getElementById(valId);
+      fill.style.width = pct + '%';
+      fill.style.left  = error >= 0 ? '50%' : (50 - pct/2) + '%';
+      if (error >= 0) fill.style.left = '50%';
+      else            fill.style.left = (50 - pct) + '%';
+      fill.style.background = pct < 33 ? 'var(--green)' : pct < 66 ? 'var(--amber)' : 'var(--red)';
+      val.textContent = (error >= 0 ? '+' : '') + error;
+      val.className = 'bar-val' + (pct >= 66 ? ' crit' : pct >= 33 ? ' warn' : '');
     }
 
-    // Poll /status every 400 ms
-    async function pollStatus() {
+    // ── Status poll ───────────────────────────────────────────────────────
+    const badge = document.getElementById('state-badge');
+    const msg   = document.getElementById('msg-bar');
+
+    async function poll() {
       try {
-        const { state } = await fetch('/status').then(r => r.json());
-        applyState(state);
-        if (state === 'searching') msg.textContent = 'Target lost — searching...';
-        else if (state === 'locked') msg.textContent = 'Target locked.';
-      } catch (_) {}
-      setTimeout(pollStatus, 400);
-    }
-    pollStatus();
+        const d = await fetch('/status').then(r => r.json());
+        const { state, pan, tilt, tx, ty, tw, th } = d;
 
+        // Badge
+        badge.className = 's-' + state;
+        badge.textContent = state.toUpperCase();
+        document.getElementById('btn-lock').classList.toggle('active', state === 'locked');
+
+        // Telemetry
+        const hasTarget = tw > 0;
+        document.getElementById('tele-pos').textContent  = hasTarget ? `${tx}, ${ty}` : '—';
+        document.getElementById('tele-size').textContent = hasTarget ? `${tw} × ${th}` : '—';
+
+        setBar('bar-pan',  'val-pan',  pan,  320);
+        setBar('bar-tilt', 'val-tilt', tilt, 240);
+        drawAim(hasTarget ? tx : 0, hasTarget ? ty : 0, state === 'locked');
+
+        if (state === 'searching' && msg.textContent !== 'Re-acquiring target...') msg.textContent = 'Re-acquiring target...';
+        else if (state === 'idle' && msg.textContent === 'Re-acquiring target...') msg.textContent = 'Lost — reset to IDLE.';
+        else if (state === 'locked' && (msg.textContent.includes('Lock') || msg.textContent.includes('Re-'))) msg.textContent = 'Target locked.';
+      } catch (_) {}
+      setTimeout(poll, 400);
+    }
+    poll();
+    document.getElementById('sys-ip').textContent = location.hostname;
+
+    // ── Buttons ───────────────────────────────────────────────────────────
     async function lockTarget() {
       msg.textContent = 'Locking…';
-      const res = await fetch('/lock', { method: 'POST' });
-      if (!res.ok) { msg.textContent = 'Server error.'; return; }
-      // Wait briefly for capture loop to process
-      await new Promise(r => setTimeout(r, 400));
+      await fetch('/lock', { method: 'POST' });
+      await new Promise(r => setTimeout(r, 450));
       const { state } = await fetch('/status').then(r => r.json());
-      if (state !== 'locked') msg.textContent = 'No target visible — move object to centre first.';
+      if (state !== 'locked') msg.textContent = 'No target visible — move object to centre.';
     }
 
     async function resetTracker() {

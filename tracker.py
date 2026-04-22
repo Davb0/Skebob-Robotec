@@ -33,6 +33,7 @@ _state_lock = threading.Lock()
 _shared_state = IDLE
 _snapshot_request = False
 _reset_request = False
+_shared_telemetry = {"pan": 0, "tilt": 0, "tx": 0, "ty": 0, "tw": 0, "th": 0}
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +133,7 @@ def annotate_frame(frame, box, cx, cy, pan_error, tilt_error, state):
 # Capture loop
 # ---------------------------------------------------------------------------
 def capture_loop() -> None:
-    global _latest_frame, _latest_raw, _shared_state, _snapshot_request, _reset_request
+    global _latest_frame, _latest_raw, _shared_state, _snapshot_request, _reset_request, _shared_telemetry
 
     cam = Picamera2()
     cam.configure(cam.create_preview_configuration(
@@ -254,6 +255,11 @@ def capture_loop() -> None:
         else:
             pan_error = tilt_error = 0
 
+        x, y, w, h = box if box else (0, 0, 0, 0)
+        with _state_lock:
+            _shared_telemetry = {"pan": pan_error, "tilt": tilt_error,
+                                 "tx": cx, "ty": cy, "tw": w, "th": h}
+
         annotated = annotate_frame(frame, box, cx, cy, pan_error, tilt_error, state)
         with _frame_lock:
             _latest_frame = annotated
@@ -300,7 +306,7 @@ def reset_tracker():
 @app.route("/status")
 def tracker_status():
     with _state_lock:
-        return jsonify({"state": _shared_state})
+        return jsonify({"state": _shared_state, **_shared_telemetry})
 
 
 # ---------------------------------------------------------------------------
