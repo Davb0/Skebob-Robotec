@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import threading
 import time
-from flask import Flask, Response, render_template, jsonify
+from flask import Flask, Response, render_template, jsonify, request
 from picamera2 import Picamera2
 import board
 from adafruit_pca9685 import PCA9685
@@ -30,11 +30,15 @@ AUTO_LOCK_FRAMES = 8    # consecutive MOG2 detections before auto-locking
 
 PAN_CHANNEL  = 0
 TILT_CHANNEL = 1
-PAN_SPEED    = 0.12     # degrees moved per pixel of error
-TILT_SPEED   = 0.12
-SERVO_DEADZONE = 8      # px — ignore error smaller than this
-EMA_ALPHA    = 0.25     # smoothing factor (lower = smoother but laggier)
+SERVO_DEADZONE  = 15    # px — ignore error smaller than this
+SERVO_STEP_GAIN = 0.03  # px of error → degrees of step
+SERVO_STEP_MAX  = 2.0   # degrees — hard cap per frame (prevents oscillation)
+SERVO_SEARCH_MAX = 4.5  # degrees — faster sweep when target left FOV
+EMA_ALPHA       = 0.20  # smoothing factor (lower = smoother but laggier)
 CSRT_PADDING = 0.4      # fractional padding added around blob before CSRT init
+CLICK_BOX_SIZE = 40     # px — CSRT box half-size when locking via click
+TILT_IDLE_ANGLE = 60.0  # degrees — tilt rests here until a target is locked
+MOUSE_EMA = 0.12        # how fast camera follows mouse position (higher = faster)
 
 # Tracker states
 IDLE      = "idle"
@@ -50,7 +54,7 @@ _pca.frequency = 50
 _pan_servo  = adafruit_servo.Servo(_pca.channels[PAN_CHANNEL])
 _tilt_servo = adafruit_servo.Servo(_pca.channels[TILT_CHANNEL])
 _pan_angle  = 90.0
-_tilt_angle = 90.0
+_tilt_angle = TILT_IDLE_ANGLE
 _pan_servo.angle  = _pan_angle
 _tilt_servo.angle = _tilt_angle
 _servo_lock = threading.Lock()
@@ -60,15 +64,32 @@ def _clamp(val, lo=0.0, hi=180.0):
     return max(lo, min(hi, val))
 
 
-def move_servos(pan_error: int, tilt_error: int) -> None:
+def _snap_to_home() -> None:
     global _pan_angle, _tilt_angle
     with _servo_lock:
-        if abs(pan_error) > SERVO_DEADZONE:
-            _pan_angle = _clamp(_pan_angle - pan_error * PAN_SPEED)
-            _pan_servo.angle = _pan_angle
-        if abs(tilt_error) > SERVO_DEADZONE:
-            _tilt_angle = _clamp(_tilt_angle + tilt_error * TILT_SPEED)
+        try:
+            _pan_angle  = 90.0
+            _tilt_angle = TILT_IDLE_ANGLE
+            _pan_servo.angle  = _pan_angle
             _tilt_servo.angle = _tilt_angle
+        except OSError as e:
+            print(f"[SERVO] I2C error on home: {e}")
+
+
+def move_servos(pan_error: int, tilt_error: int, step_max: float = SERVO_STEP_MAX) -> None:
+    global _pan_angle, _tilt_angle
+    with _servo_lock:
+        try:
+            if abs(pan_error) > SERVO_DEADZONE:
+                step = min(abs(pan_error) * SERVO_STEP_GAIN, step_max)
+                _pan_angle = _clamp(_pan_angle - (step if pan_error > 0 else -step))
+                _pan_servo.angle = _pan_angle
+            if abs(tilt_error) > SERVO_DEADZONE:
+                step = min(abs(tilt_error) * SERVO_STEP_GAIN, step_max)
+                _tilt_angle = _clamp(_tilt_angle - (step if tilt_error > 0 else -step))
+                _tilt_servo.angle = _tilt_angle
+        except OSError as e:
+            print(f"[SERVO] I2C error: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -100,14 +121,16 @@ _frame_lock = threading.Lock()
 _latest_frame = None
 
 _state_lock = threading.Lock()
-_shared_state    = IDLE
-_snapshot_request = False
-_reset_request    = False
-_auto_lock        = False          # toggled by /auto-lock route
+_shared_state       = IDLE
+_click_lock_request = None   # (norm_x, norm_y) from browser click, or None
+_reset_request      = False
+_mouse_control      = False
+_mouse_nx           = 0.5
+_mouse_ny           = 0.5
 _shared_telemetry = {"pan_err": 0, "tilt_err": 0,
                      "tx": 0, "ty": 0, "tw": 0, "th": 0,
                      "pan_angle": 90, "tilt_angle": 90,
-                     "auto_lock": False}
+                     "mouse_control": False}
 
 
 # ---------------------------------------------------------------------------
@@ -182,7 +205,7 @@ _STATE_STYLE = {
     SEARCHING: {"color": (0, 200, 255), "label": "SEARCHING"},
 }
 
-def annotate_frame(frame, box, cx, cy, pan_error, tilt_error, state, auto_lock):
+def annotate_frame(frame, box, cx, cy, pan_error, tilt_error, state):
     out = frame.copy()
     cx0, cy0 = IMAGE_CENTER_X, IMAGE_CENTER_Y
     cv2.line(out, (cx0 - 20, cy0), (cx0 + 20, cy0), (0, 255, 0), 1)
@@ -193,9 +216,8 @@ def annotate_frame(frame, box, cx, cy, pan_error, tilt_error, state, auto_lock):
         x, y, w, h = box
         cv2.rectangle(out, (x, y), (x + w, y + h), style["color"], 2)
         cv2.line(out, (cx0, cy0), (cx, cy), (255, 0, 0), 1)
-        mode = "AUTO" if auto_lock else "MANUAL"
-        cv2.putText(out, f"{style['label']} [{mode}]  err ({pan_error:+d}, {tilt_error:+d})",
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        cv2.putText(out, f"{style['label']}  err ({pan_error:+d}, {tilt_error:+d})",
+                    (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
     elif state == SEARCHING:
         cv2.putText(out, "SEARCHING...", (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, style["color"], 2)
@@ -210,11 +232,13 @@ def annotate_frame(frame, box, cx, cy, pan_error, tilt_error, state, auto_lock):
 # Capture loop
 # ---------------------------------------------------------------------------
 def capture_loop() -> None:
-    global _latest_frame, _shared_state, _snapshot_request, _reset_request, _shared_telemetry
+    global _latest_frame, _shared_state, _click_lock_request, _reset_request, _shared_telemetry
+    global _mouse_control, _mouse_nx, _mouse_ny, _pan_angle, _tilt_angle
 
     cam = Picamera2()
     cam.configure(cam.create_preview_configuration(
-        main={"size": (FRAME_WIDTH, FRAME_HEIGHT), "format": "BGR888"}
+        main={"size": (FRAME_WIDTH, FRAME_HEIGHT), "format": "BGR888"},
+        controls={"FrameRate": 15}
     ))
     cam.start()
     print("Camera started.")
@@ -232,39 +256,42 @@ def capture_loop() -> None:
     last_known_area = None
     lost_count    = 0
     search_count  = 0
-    confirm_count = 0   # consecutive MOG2 detections for auto-lock
 
     while True:
         frame = cv2.rotate(cv2.cvtColor(cam.capture_array(), cv2.COLOR_RGB2BGR), cv2.ROTATE_180)
 
         with _state_lock:
-            do_snap   = _snapshot_request;  _snapshot_request = False
-            do_reset  = _reset_request;      _reset_request    = False
-            auto_lock = _auto_lock
+            do_click  = _click_lock_request; _click_lock_request = None
+            do_reset  = _reset_request;      _reset_request      = False
+            mouse_on  = _mouse_control
+            mouse_nx  = _mouse_nx
+            mouse_ny  = _mouse_ny
 
         if do_reset:
             state = IDLE; csrt = None
             last_pos = last_area = None
             last_known_pos = last_known_area = None
-            lost_count = search_count = confirm_count = 0
+            lost_count = search_count = 0
+            _snap_to_home()
             print("[RESET] Tracker reset to IDLE")
 
         # Always keep MOG2 background model fresh
         fg = bg_sub.apply(frame)
 
-        # Manual lock: init CSRT on current best blob
-        if do_snap and state != LOCKED:
-            mot = find_target_motion(fg, last_pos, last_area)
-            if mot:
-                _, _, x, y, w, h, area = mot
-                csrt  = init_csrt(frame, x, y, w, h)
-                state = LOCKED
-                last_pos  = (x + w // 2, y + h // 2)
-                last_area = area
-                confirm_count = 0
-                print(f"[LOCK] Manual CSRT init at ({x},{y},{w},{h})")
-            else:
-                print("[LOCK] No target visible")
+        # Click-to-lock: init CSRT centered on the clicked point
+        if do_click is not None:
+            nx, ny = do_click
+            fx = int(nx * FRAME_WIDTH)
+            fy = int(ny * FRAME_HEIGHT)
+            half = CLICK_BOX_SIZE
+            x1 = max(0, fx - half); y1 = max(0, fy - half)
+            x2 = min(FRAME_WIDTH, fx + half); y2 = min(FRAME_HEIGHT, fy + half)
+            csrt  = cv2.TrackerCSRT_create()
+            csrt.init(frame, (x1, y1, x2 - x1, y2 - y1))
+            state = LOCKED
+            last_pos = last_known_pos = (fx, fy)
+            last_area = last_known_area = (x2 - x1) * (y2 - y1)
+            print(f"[CLICK-LOCK] CSRT init at frame ({fx},{fy})")
 
         box = None; cx = cy = 0
 
@@ -281,7 +308,7 @@ def capture_loop() -> None:
             else:
                 print("[LOCK] Target lost — searching...")
                 state = SEARCHING
-                search_count = confirm_count = 0
+                search_count = 0
                 csrt = None
 
         elif state == SEARCHING:
@@ -293,7 +320,7 @@ def capture_loop() -> None:
                 state = LOCKED
                 last_pos  = (x + w // 2, y + h // 2)
                 last_area = area
-                search_count = confirm_count = 0
+                search_count = 0
                 print("[LOCK] Re-acquired.")
             else:
                 search_count += 1
@@ -302,7 +329,8 @@ def capture_loop() -> None:
                     state = IDLE; csrt = None
                     last_pos = last_area = None
                     last_known_pos = last_known_area = None
-                    search_count = confirm_count = 0
+                    search_count = 0
+                    _snap_to_home()
 
         else:  # IDLE
             mot = find_target_motion(fg, last_pos, last_area)
@@ -312,21 +340,26 @@ def capture_loop() -> None:
                 last_pos  = (cx, cy)
                 last_area = area
                 lost_count = 0
-                confirm_count += 1
-                # Auto-lock once we've seen a stable target long enough
-                if auto_lock and confirm_count >= AUTO_LOCK_FRAMES:
-                    csrt  = init_csrt(frame, x, y, w, h)
-                    state = LOCKED
-                    confirm_count = 0
-                    print("[AUTO] Auto-locked on target.")
             else:
                 lost_count += 1
-                confirm_count = 0
                 if lost_count > GRACE_FRAMES:
                     last_pos = last_area = None
 
         # ── Servo control ──────────────────────────────────────────────────
-        if box:
+        pan_error = tilt_error = 0
+        if mouse_on:
+            # Position control: mouse maps directly to a target servo angle
+            target_pan  = 30.0 + mouse_nx * 120.0   # 0-1 → 30-150°
+            target_tilt = 30.0 + mouse_ny * 120.0
+            with _servo_lock:
+                try:
+                    _pan_angle  += MOUSE_EMA * (target_pan  - _pan_angle)
+                    _tilt_angle += MOUSE_EMA * (target_tilt - _tilt_angle)
+                    _pan_servo.angle  = _pan_angle
+                    _tilt_servo.angle = _tilt_angle
+                except OSError as e:
+                    print(f"[SERVO] I2C error: {e}")
+        elif box:
             smooth_pan  = EMA_ALPHA * (cx - IMAGE_CENTER_X)  + (1 - EMA_ALPHA) * smooth_pan
             smooth_tilt = EMA_ALPHA * (IMAGE_CENTER_Y - cy)  + (1 - EMA_ALPHA) * smooth_tilt
             pan_error  = int(smooth_pan)
@@ -335,12 +368,7 @@ def capture_loop() -> None:
             last_pan_error  = pan_error
             last_tilt_error = tilt_error
         elif state == SEARCHING:
-            # Coast servos in the last known direction, fading out over the search window
-            coast = max(0.0, 1.0 - search_count / REACQUIRE_FRAMES) * 0.25
-            move_servos(int(last_pan_error * coast), int(last_tilt_error * coast))
-            pan_error = tilt_error = 0
-        else:
-            pan_error = tilt_error = 0
+            move_servos(last_pan_error, last_tilt_error, step_max=SERVO_SEARCH_MAX)
 
         with _servo_lock:
             pa, ta = _pan_angle, _tilt_angle
@@ -352,11 +380,10 @@ def capture_loop() -> None:
                 "tx": cx, "ty": cy,
                 "tw": box[2] if box else 0, "th": box[3] if box else 0,
                 "pan_angle": round(pa, 1), "tilt_angle": round(ta, 1),
-                "auto_lock": auto_lock,
+                "mouse_control": mouse_on,
             }
 
-        annotated = annotate_frame(frame, box, cx, cy, pan_error, tilt_error,
-                                   state, auto_lock)
+        annotated = annotate_frame(frame, box, cx, cy, pan_error, tilt_error, state)
         with _frame_lock:
             _latest_frame = annotated
 
@@ -383,12 +410,15 @@ def _apply_servo_button(button: int) -> None:
         return
     axis, step = _SERVO_BUTTONS[button]
     with _servo_lock:
-        if axis == "pan":
-            _pan_angle = _clamp(_pan_angle + step)
-            _pan_servo.angle = _pan_angle
-        else:
-            _tilt_angle = _clamp(_tilt_angle + step)
-            _tilt_servo.angle = _tilt_angle
+        try:
+            if axis == "pan":
+                _pan_angle = _clamp(_pan_angle + step)
+                _pan_servo.angle = _pan_angle
+            else:
+                _tilt_angle = _clamp(_tilt_angle + step)
+                _tilt_servo.angle = _tilt_angle
+        except OSError as e:
+            print(f"[SERVO] I2C error: {e}")
 
 
 def joystick_loop():
@@ -450,7 +480,7 @@ def joystick_loop():
 # ---------------------------------------------------------------------------
 def generate_mjpeg():
     while True:
-        time.sleep(0.033)
+        time.sleep(0.066)
         with _frame_lock:
             frame = _latest_frame
         if frame is None:
@@ -469,11 +499,12 @@ def index():
 def video_feed():
     return Response(generate_mjpeg(), mimetype="multipart/x-mixed-replace; boundary=frame")
 
-@app.route("/lock", methods=["POST"])
-def lock_target():
-    global _snapshot_request
+@app.route("/click-lock", methods=["POST"])
+def click_lock():
+    global _click_lock_request
+    data = request.get_json(force=True)
     with _state_lock:
-        _snapshot_request = True
+        _click_lock_request = (float(data["x"]), float(data["y"]))
     return jsonify({"ok": True})
 
 @app.route("/reset", methods=["POST"])
@@ -483,13 +514,24 @@ def reset_tracker():
         _reset_request = True
     return jsonify({"ok": True})
 
-@app.route("/auto-lock", methods=["POST"])
-def toggle_auto_lock():
-    global _auto_lock
+@app.route("/mouse-toggle", methods=["POST"])
+def mouse_toggle():
+    global _mouse_control, _mouse_nx, _mouse_ny
     with _state_lock:
-        _auto_lock = not _auto_lock
-        state = _auto_lock
-    return jsonify({"auto_lock": state})
+        _mouse_control = not _mouse_control
+        if not _mouse_control:
+            _mouse_nx = _mouse_ny = 0.5
+        val = _mouse_control
+    return jsonify({"mouse_control": val})
+
+@app.route("/mouse-move", methods=["POST"])
+def mouse_move_route():
+    global _mouse_nx, _mouse_ny
+    data = request.get_json(force=True)
+    _mouse_nx = max(0.0, min(1.0, float(data.get("x", 0.5))))
+    _mouse_ny = max(0.0, min(1.0, float(data.get("y", 0.5))))
+    return "", 204
+
 
 @app.route("/status")
 def tracker_status():

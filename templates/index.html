@@ -8,130 +8,216 @@
       --green:  #00ff88;
       --amber:  #ffaa00;
       --red:    #ff4444;
-      --bg:     #0d0d0d;
-      --panel:  #111418;
-      --border: #1e2a1e;
-      --dim:    #3a3a3a;
-      --text:   #c8d8c8;
+      --blue:   #4488ff;
+      --teal:   #44ddaa;
+      --bg:     #080c0a;
+      --panel:  #0d1210;
+      --border: #1a2e1a;
+      --dim:    #3a4a3a;
+      --text:   #b8ccb8;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     html, body {
       height: 100%; overflow: hidden;
       background: var(--bg); color: var(--text);
       font-family: 'Courier New', monospace;
     }
-    body {
-      display: flex; flex-direction: column;
-      padding: 8px; gap: 8px;
-    }
+    body { display: flex; flex-direction: column; padding: 6px; gap: 6px; }
 
     /* ── Header ── */
     header {
       display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid var(--border); padding-bottom: 6px;
-      flex-shrink: 0;
+      border-bottom: 1px solid var(--border); padding-bottom: 5px;
+      flex-shrink: 0; position: relative;
     }
-    .logo { color: var(--green); font-size: 1rem; letter-spacing: 3px; }
-    .logo span { color: var(--dim); font-size: 0.65rem; letter-spacing: 1px; }
+    header::after {
+      content: ''; position: absolute; bottom: -1px; left: 0;
+      width: 40%; height: 1px; background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+    .logo {
+      color: var(--green); font-size: 1.05rem; letter-spacing: 4px;
+      text-shadow: 0 0 12px rgba(0,255,136,.4);
+    }
+    .logo span { color: var(--dim); font-size: 0.6rem; letter-spacing: 2px; margin-left: 8px; }
+    .header-right { display: flex; align-items: center; gap: 18px; }
+    .hdr-stat { font-size: 0.6rem; color: var(--dim); letter-spacing: 1px; text-align: right; }
+    .hdr-stat b { color: var(--text); display: block; font-size: 0.7rem; }
+    .live-pill {
+      display: flex; align-items: center; gap: 6px;
+      border: 1px solid var(--border); border-radius: 20px;
+      padding: 3px 10px; font-size: 0.65rem;
+    }
     .live-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--green); display: inline-block; margin-right: 5px;
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 6px var(--green);
       animation: blink 1.4s infinite;
     }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
-    .live-label { font-size: 0.7rem; color: var(--green); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.15} }
+    .live-label { color: var(--green); letter-spacing: 2px; }
 
-    /* ── 3-column grid ── */
+    /* ── Grid ── */
     .main-grid {
       flex: 1; min-height: 0;
       display: grid;
-      grid-template-columns: 1fr 210px 210px;
-      gap: 8px;
+      grid-template-columns: 1fr 270px 270px;
+      gap: 6px;
     }
 
     /* ── Feed ── */
     .feed-wrap {
-      border: 1px solid var(--border); border-radius: 4px;
-      overflow: hidden; background: #000; position: relative;
-      height: 100%;
+      background: #000; position: relative; height: 100%;
+      border: 1px solid var(--border); border-radius: 3px; overflow: hidden;
     }
-    #feed { width: 100%; height: 100%; object-fit: contain; display: block; }
+    /* HUD corner brackets */
+    .feed-wrap::before, .feed-wrap::after,
+    .feed-corner-bl, .feed-corner-br {
+      content: ''; position: absolute; width: 18px; height: 18px;
+      pointer-events: none; z-index: 2;
+    }
+    .feed-wrap::before { top: 6px; left: 6px; border-top: 2px solid var(--green); border-left: 2px solid var(--green); }
+    .feed-wrap::after  { top: 6px; right: 6px; border-top: 2px solid var(--green); border-right: 2px solid var(--green); }
+    .feed-corner-bl { bottom: 6px; left: 6px; border-bottom: 2px solid var(--green); border-left: 2px solid var(--green); }
+    .feed-corner-br { bottom: 6px; right: 6px; border-bottom: 2px solid var(--green); border-right: 2px solid var(--green); }
+    #feed { width: 100%; height: 100%; object-fit: contain; display: block; cursor: crosshair; }
+    .feed-scanline {
+      position: absolute; inset: 0; pointer-events: none; z-index: 1;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.08) 2px, rgba(0,0,0,.08) 4px);
+    }
     .feed-overlay {
-      position: absolute; bottom: 6px; left: 8px;
-      font-size: 0.65rem; color: rgba(0,255,136,.5);
+      position: absolute; bottom: 10px; left: 14px; z-index: 3;
+      font-size: 0.6rem; color: rgba(0,255,136,.45); letter-spacing: 1px;
       pointer-events: none;
     }
+    #mouse-overlay { position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:none;z-index:3; }
 
-    /* ── Column wrappers ── */
-    .col { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+    /* ── Columns ── */
+    .col { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
 
     /* ── Panel ── */
     .panel {
       background: var(--panel); border: 1px solid var(--border);
-      border-radius: 4px; padding: 8px;
-      display: flex; flex-direction: column; gap: 6px;
+      border-radius: 3px; padding: 10px;
+      display: flex; flex-direction: column; gap: 8px;
     }
     .panel-title {
-      font-size: 0.6rem; letter-spacing: 2px; color: var(--dim);
+      font-size: 0.55rem; letter-spacing: 3px; color: var(--dim);
       text-transform: uppercase; border-bottom: 1px solid var(--border);
-      padding-bottom: 4px; display: flex; justify-content: space-between;
+      padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center;
     }
+    .panel-title-accent { color: var(--green); font-size: 0.6rem; }
 
     /* ── State badge ── */
+    .state-row { display: flex; align-items: center; justify-content: space-between; }
     #state-badge {
-      display: inline-block; padding: 2px 8px; border-radius: 2px;
-      font-size: 0.7rem; letter-spacing: 2px; font-weight: bold;
-      transition: background .3s, color .3s;
+      display: inline-block; padding: 4px 14px; border-radius: 2px;
+      font-size: 1.1rem; letter-spacing: 3px; font-weight: bold;
+      transition: background .3s, color .3s, box-shadow .3s;
     }
-    .s-idle      { background: #1a1a1a; color: var(--dim); }
-    .s-locked    { background: var(--green); color: #000; }
-    .s-searching { background: var(--amber); color: #000; animation: pulse .7s infinite alternate; }
-    @keyframes pulse { from{opacity:1} to{opacity:.5} }
+    .s-idle     { background: #141a14; color: var(--dim); border: 1px solid #1e2e1e; }
+    .s-locked   { background: rgba(0,255,136,.15); color: var(--green); border: 1px solid var(--green);
+                  box-shadow: 0 0 12px rgba(0,255,136,.25); }
+    .s-searching{ background: rgba(255,170,0,.15); color: var(--amber); border: 1px solid var(--amber);
+                  animation: pulse .7s infinite alternate; }
+    @keyframes pulse { from{opacity:1} to{opacity:.4} }
 
-    /* ── Rows ── */
-    .tele-row { display: flex; justify-content: space-between; font-size: 0.72rem; }
-    .tele-label { color: var(--dim); }
-    .tele-val   { color: var(--green); font-weight: bold; }
+    /* ── Big telemetry numbers ── */
+    .tele-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    }
+    .tele-cell {
+      background: #0a0f0a; border: 1px solid var(--border); border-radius: 3px;
+      padding: 8px 10px;
+    }
+    .tele-cell-label { font-size: 0.5rem; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
+    .tele-cell-val {
+      font-size: 1.7rem; font-weight: bold; color: var(--green);
+      letter-spacing: 1px; line-height: 1.15; margin-top: 3px;
+      text-shadow: 0 0 10px rgba(0,255,136,.35);
+    }
+    .tele-cell-val.amber { color: var(--amber); text-shadow: 0 0 10px rgba(255,170,0,.35); }
+    .tele-cell-val.blue  { color: var(--blue);  text-shadow: 0 0 10px rgba(68,136,255,.35); }
 
-    /* ── Bars ── */
-    .bar-row { display: flex; align-items: center; gap: 5px; font-size: 0.68rem; }
-    .bar-label { color: var(--dim); width: 28px; flex-shrink: 0; }
+    /* ── Error bars ── */
+    .bar-section-title { font-size: 0.5rem; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
+    .bar-row { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; }
+    .bar-label { color: var(--dim); width: 30px; flex-shrink: 0; letter-spacing: 1px; }
     .bar-track {
-      flex: 1; height: 5px; background: #1a2a1a; border-radius: 3px;
-      overflow: hidden; position: relative;
+      flex: 1; height: 8px; background: #0d1a0d; border-radius: 4px;
+      overflow: hidden; position: relative; border: 1px solid var(--border);
     }
     .bar-fill {
-      height: 100%; width: 0%; border-radius: 3px;
-      background: var(--green); transition: width .1s, background .2s;
+      height: 100%; width: 0%; border-radius: 4px;
+      background: var(--green); transition: width .1s, background .2s, left .1s;
       position: absolute; top: 0;
     }
-    .bar-val { color: var(--text); width: 34px; text-align: right; flex-shrink: 0; }
+    .bar-val { color: var(--text); width: 42px; text-align: right; flex-shrink: 0; font-size: 0.9rem; font-weight: bold; }
+
+    /* ── Aim canvas ── */
+    #aim-canvas { width: 100%; display: block; border-radius: 3px; border: 1px solid var(--border); }
 
     /* ── Buttons ── */
     .btn-row { display: flex; gap: 6px; }
     button {
-      flex: 1; padding: 6px 0; font-family: inherit; font-size: 0.72rem;
-      letter-spacing: 1px; border: 1px solid; border-radius: 3px;
+      flex: 1; padding: 7px 0; font-family: inherit; font-size: 0.7rem;
+      letter-spacing: 2px; border: 1px solid; border-radius: 3px;
       cursor: pointer; background: transparent;
-      transition: background .15s, color .15s; text-transform: uppercase;
+      transition: background .15s, color .15s, box-shadow .15s; text-transform: uppercase;
     }
-    #btn-lock  { color: var(--green); border-color: var(--green); }
-    #btn-lock:hover, #btn-lock.active { background: var(--green); color: #000; }
-    #btn-reset { color: var(--red);   border-color: var(--red); }
-    #btn-reset:hover { background: var(--red); color: #000; }
-    #btn-auto  { color: var(--amber); border-color: var(--amber); }
+    #btn-reset { color: var(--red); border-color: var(--red); }
+    #btn-reset:hover { background: var(--red); color: #000; box-shadow: 0 0 10px rgba(255,68,68,.4); }
+    #btn-mouse { color: var(--amber); border-color: var(--amber); }
+    #btn-mouse:hover { background: rgba(255,170,0,.15); }
+    #btn-mouse.active { background: var(--amber); color: #000; box-shadow: 0 0 10px rgba(255,170,0,.4); }
+    #msg-bar { font-size: 0.65rem; color: var(--amber); min-height: 1em; letter-spacing: 1px; }
 
-    #msg-bar { font-size: 0.68rem; color: var(--amber); min-height: 1em; }
+    /* ── Servo angles (big) ── */
+    .servo-angles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .servo-angle-cell {
+      background: #0a0f0a; border: 1px solid var(--border); border-radius: 3px; padding: 8px 10px; text-align: center;
+    }
+    .servo-angle-label { font-size: 0.5rem; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
+    .servo-angle-val { font-size: 2rem; font-weight: bold; line-height: 1.1; margin-top: 3px; }
+    .servo-angle-val.pan  { color: var(--blue);  text-shadow: 0 0 10px rgba(68,136,255,.3); }
+    .servo-angle-val.tilt { color: var(--teal); text-shadow: 0 0 10px rgba(68,221,170,.3); }
+
+    .servo-bar-row { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; }
+    .servo-bar-label { color: var(--dim); width: 30px; flex-shrink: 0; }
+    .servo-bar-track {
+      flex: 1; height: 6px; background: #0a0f18; border-radius: 3px;
+      overflow: hidden; position: relative; border: 1px solid #1a1a2e;
+    }
+    .servo-bar-fill { height: 100%; border-radius: 3px; position: absolute; top: 0; left: 0; transition: width .15s; }
+    #bar-sv-pan  .servo-bar-fill { background: var(--blue); }
+    #bar-sv-tilt .servo-bar-fill { background: var(--teal); }
+
+    /* ── Motor bars ── */
+    .motor-row { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; }
+    .motor-label { color: var(--dim); width: 36px; flex-shrink: 0; font-size: 0.6rem; }
+    .motor-track {
+      flex: 1; height: 8px; background: #0d1a0d; border-radius: 4px;
+      overflow: hidden; position: relative; border: 1px solid var(--border);
+    }
+    .motor-fill {
+      height: 100%; width: 0%; border-radius: 4px;
+      position: absolute; top: 0; transition: width .08s, left .08s, background .15s;
+    }
+    .motor-val { width: 36px; text-align: right; flex-shrink: 0; font-size: 0.75rem; font-weight: bold; }
   </style>
 </head>
 <body>
 
   <header>
-    <div class="logo">SKEBOB ROBOTEC <span>· AERIAL TARGET TRACKER v0.3</span></div>
     <div>
-      <span class="live-dot" id="live-dot"></span>
-      <span class="live-label" id="live-label">CONNECTING</span>
+      <div class="logo">SKEBOB ROBOTEC <span>· AERIAL TARGET TRACKER v0.3</span></div>
+    </div>
+    <div class="header-right">
+      <div class="hdr-stat"><span>FRAME</span><b>640×480</b></div>
+      <div class="hdr-stat"><span>FPS</span><b>15</b></div>
+      <div class="live-pill">
+        <span class="live-dot" id="live-dot"></span>
+        <span class="live-label" id="live-label">CONNECTING</span>
+      </div>
     </div>
   </header>
 
@@ -140,50 +226,70 @@
     <!-- ── Col 1: Feed ── -->
     <div class="feed-wrap">
       <img id="feed" src="/video" alt="feed" onload="onStreamOk()" onerror="onStreamErr()">
-      <div class="feed-overlay">640 × 480 · 30 fps</div>
+      <canvas id="mouse-overlay"></canvas>
+      <div class="feed-scanline"></div>
+      <div class="feed-corner-bl"></div>
+      <div class="feed-corner-br"></div>
+      <div class="feed-overlay">640 × 480 · 15 fps · click to lock</div>
     </div>
 
     <!-- ── Col 2: Target + Controls ── -->
     <div class="col">
 
       <div class="panel">
-        <div class="panel-title">Target</div>
-        <div class="tele-row">
-          <span class="tele-label">STATE</span>
-          <span id="state-badge" class="s-idle">IDLE</span>
+        <div class="panel-title">
+          Target
+          <span class="panel-title-accent" id="state-badge" class="s-idle">IDLE</span>
         </div>
-        <div class="tele-row">
-          <span class="tele-label">POS</span>
-          <span class="tele-val" id="tele-pos">—</span>
+
+        <div class="tele-grid">
+          <div class="tele-cell">
+            <div class="tele-cell-label">X · Y</div>
+            <div class="tele-cell-val" id="tele-pos">— · —</div>
+          </div>
+          <div class="tele-cell">
+            <div class="tele-cell-label">W × H</div>
+            <div class="tele-cell-val amber" id="tele-size">— × —</div>
+          </div>
         </div>
-        <div class="tele-row">
-          <span class="tele-label">SIZE</span>
-          <span class="tele-val" id="tele-size">—</span>
+
+        <div class="tele-grid">
+          <div class="tele-cell">
+            <div class="tele-cell-label">PAN ERR</div>
+            <div class="tele-cell-val blue" id="tele-pan-err">+0</div>
+          </div>
+          <div class="tele-cell">
+            <div class="tele-cell-label">TILT ERR</div>
+            <div class="tele-cell-val blue" id="tele-tilt-err">+0</div>
+          </div>
         </div>
-        <div class="bar-row">
-          <span class="bar-label">PAN</span>
-          <div class="bar-track"><div class="bar-fill" id="bar-pan"></div></div>
-          <span class="bar-val" id="val-pan">0</span>
-        </div>
-        <div class="bar-row">
-          <span class="bar-label">TILT</span>
-          <div class="bar-track"><div class="bar-fill" id="bar-tilt"></div></div>
-          <span class="bar-val" id="val-tilt">0</span>
+
+        <div>
+          <div class="bar-section-title" style="margin-bottom:5px">Error magnitude</div>
+          <div class="bar-row" style="margin-bottom:4px">
+            <span class="bar-label">PAN</span>
+            <div class="bar-track"><div class="bar-fill" id="bar-pan"></div></div>
+            <span class="bar-val" id="val-pan">0</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">TILT</span>
+            <div class="bar-track"><div class="bar-fill" id="bar-tilt"></div></div>
+            <span class="bar-val" id="val-tilt">0</span>
+          </div>
         </div>
       </div>
 
       <div class="panel">
         <div class="panel-title">Aim</div>
-        <canvas id="aim-canvas" width="194" height="140" style="width:100%;display:block;border-radius:3px"></canvas>
+        <canvas id="aim-canvas" width="233" height="150"></canvas>
       </div>
 
       <div class="panel">
         <div class="panel-title">Controls</div>
         <div class="btn-row">
-          <button id="btn-lock" onclick="lockTarget()">Lock</button>
           <button id="btn-reset" onclick="resetTracker()">Reset</button>
+          <button id="btn-mouse" onclick="toggleMouse()">Mouse: OFF</button>
         </div>
-        <button id="btn-auto" onclick="toggleAuto()" style="width:100%">Auto-Lock: OFF</button>
         <div id="msg-bar"></div>
       </div>
 
@@ -194,40 +300,47 @@
 
       <div class="panel">
         <div class="panel-title">Servos</div>
-        <div class="bar-row">
-          <span class="bar-label">PAN</span>
-          <div class="bar-track" style="background:#1a1a2a">
-            <div class="bar-fill" id="bar-sv-pan" style="background:#4488ff;left:0;width:50%"></div>
+
+        <div class="servo-angles">
+          <div class="servo-angle-cell">
+            <div class="servo-angle-label">PAN</div>
+            <div class="servo-angle-val pan" id="sv-pan-big">90°</div>
           </div>
-          <span class="bar-val" id="sv-pan">90°</span>
-        </div>
-        <div class="bar-row">
-          <span class="bar-label">TILT</span>
-          <div class="bar-track" style="background:#1a1a2a">
-            <div class="bar-fill" id="bar-sv-tilt" style="background:#44ddaa;left:0;width:50%"></div>
+          <div class="servo-angle-cell">
+            <div class="servo-angle-label">TILT</div>
+            <div class="servo-angle-val tilt" id="sv-tilt-big">90°</div>
           </div>
-          <span class="bar-val" id="sv-tilt">90°</span>
         </div>
-        <canvas id="servo-canvas" width="194" height="72" style="width:100%;display:block;margin-top:2px"></canvas>
+
+        <div class="servo-bar-row" id="bar-sv-pan">
+          <span class="servo-bar-label">PAN</span>
+          <div class="servo-bar-track"><div class="servo-bar-fill" style="width:50%"></div></div>
+        </div>
+        <div class="servo-bar-row" id="bar-sv-tilt">
+          <span class="servo-bar-label">TILT</span>
+          <div class="servo-bar-track"><div class="servo-bar-fill" style="width:50%"></div></div>
+        </div>
+
+        <canvas id="servo-canvas" width="233" height="72" style="width:100%;display:block;margin-top:2px"></canvas>
       </div>
 
       <div class="panel" style="flex:1;min-height:0">
         <div class="panel-title">
           <span>Controller</span>
-          <span id="joy-status" style="color:var(--red)">DISCONNECTED</span>
+          <span id="joy-status" style="color:var(--red);font-size:0.6rem;letter-spacing:2px">DISCONNECTED</span>
         </div>
-        <canvas id="joy-canvas" width="194" height="100" style="width:100%;display:block"></canvas>
-        <div class="bar-row">
-          <span class="bar-label" style="width:36px">L MTR</span>
-          <div class="bar-track"><div class="bar-fill" id="bar-lm"></div></div>
-          <span class="bar-val" id="val-lm">0%</span>
+        <canvas id="joy-canvas" width="233" height="110" style="width:100%;display:block"></canvas>
+        <div class="motor-row">
+          <span class="motor-label">L MTR</span>
+          <div class="motor-track"><div class="motor-fill" id="bar-lm"></div></div>
+          <span class="motor-val" id="val-lm">0%</span>
         </div>
-        <div class="bar-row">
-          <span class="bar-label" style="width:36px">R MTR</span>
-          <div class="bar-track"><div class="bar-fill" id="bar-rm"></div></div>
-          <span class="bar-val" id="val-rm">0%</span>
+        <div class="motor-row">
+          <span class="motor-label">R MTR</span>
+          <div class="motor-track"><div class="motor-fill" id="bar-rm"></div></div>
+          <span class="motor-val" id="val-rm">0%</span>
         </div>
-        <div id="joy-name" style="font-size:0.58rem;color:var(--dim);text-align:center"></div>
+        <div id="joy-name" style="font-size:0.55rem;color:var(--dim);text-align:center;letter-spacing:1px"></div>
       </div>
 
     </div>
@@ -251,36 +364,37 @@
     function drawAim(tx, ty, locked) {
       const W = ac.width, H = ac.height;
       actx.clearRect(0,0,W,H);
-      actx.strokeStyle = '#1a2a1a'; actx.lineWidth = 1;
-      for (let x=0;x<=W;x+=W/6){actx.beginPath();actx.moveTo(x,0);actx.lineTo(x,H);actx.stroke();}
+      actx.strokeStyle = '#0d1a0d'; actx.lineWidth = 1;
+      for (let x=0;x<=W;x+=W/8){actx.beginPath();actx.moveTo(x,0);actx.lineTo(x,H);actx.stroke();}
       for (let y=0;y<=H;y+=H/6){actx.beginPath();actx.moveTo(0,y);actx.lineTo(W,y);actx.stroke();}
-      actx.strokeStyle='#2a4a2a';actx.lineWidth=1;
-      actx.beginPath();actx.moveTo(W/2-12,H/2);actx.lineTo(W/2+12,H/2);actx.stroke();
-      actx.beginPath();actx.moveTo(W/2,H/2-12);actx.lineTo(W/2,H/2+12);actx.stroke();
+      actx.strokeStyle='#1a3a1a';actx.lineWidth=1;
+      actx.beginPath();actx.moveTo(W/2-14,H/2);actx.lineTo(W/2+14,H/2);actx.stroke();
+      actx.beginPath();actx.moveTo(W/2,H/2-14);actx.lineTo(W/2,H/2+14);actx.stroke();
+      actx.beginPath();actx.arc(W/2,H/2,5,0,Math.PI*2);actx.stroke();
       if (!tx && !ty) return;
       const px=(tx/640)*W, py=(ty/480)*H;
-      actx.strokeStyle=locked?'rgba(255,136,0,.4)':'rgba(0,255,136,.3)';actx.lineWidth=1;
+      const color = locked ? '#ff8800' : '#00ff88';
+      actx.strokeStyle=locked?'rgba(255,136,0,.3)':'rgba(0,255,136,.25)';actx.lineWidth=1;
       actx.beginPath();actx.moveTo(W/2,H/2);actx.lineTo(px,py);actx.stroke();
-      actx.fillStyle=locked?'#ff8800':'#00ff88';
-      actx.beginPath();actx.arc(px,py,4,0,Math.PI*2);actx.fill();
-      actx.strokeStyle=locked?'#ff8800':'#00ff88';actx.lineWidth=1.5;
-      actx.beginPath();actx.arc(px,py,10,0,Math.PI*2);actx.stroke();
+      actx.fillStyle=color+'33';actx.beginPath();actx.arc(px,py,12,0,Math.PI*2);actx.fill();
+      actx.strokeStyle=color;actx.lineWidth=1.5;actx.beginPath();actx.arc(px,py,12,0,Math.PI*2);actx.stroke();
+      actx.fillStyle=color;actx.beginPath();actx.arc(px,py,3,0,Math.PI*2);actx.fill();
     }
     drawAim(0,0,false);
 
     // ── Bar helpers ───────────────────────────────────────────────────────
     function setBar(fillId, valId, error, maxErr) {
-      const pct = Math.min(Math.abs(error)/maxErr*100,100);
+      const pct = Math.min(Math.abs(error)/maxErr*100, 100);
       const fill = document.getElementById(fillId);
       fill.style.width = pct+'%';
       fill.style.left  = error>=0 ? '50%' : (50-pct)+'%';
       fill.style.background = pct<33?'var(--green)':pct<66?'var(--amber)':'var(--red)';
       document.getElementById(valId).textContent = (error>=0?'+':'')+error;
     }
-    function setServoBar(fillId, valId, deg) {
-      const pct = (deg/180)*100;
-      document.getElementById(fillId).style.width = pct+'%';
-      document.getElementById(valId).textContent  = Math.round(deg)+'°';
+    function setServoAngle(bigId, barRowId, deg) {
+      document.getElementById(bigId).textContent = Math.round(deg)+'°';
+      const fill = document.querySelector('#'+barRowId+' .servo-bar-fill');
+      if (fill) fill.style.width = (deg/180*100)+'%';
     }
     function setMotorBar(fillId, valId, speed) {
       const pct = Math.abs(speed)*100;
@@ -298,81 +412,93 @@
       const W=sc.width, H=sc.height;
       sctx.clearRect(0,0,W,H);
       const arc=(cx,label,deg,color)=>{
-        const r=26, a=Math.PI-(deg/180)*Math.PI;
-        sctx.strokeStyle='#1a2a1a';sctx.lineWidth=5;
-        sctx.beginPath();sctx.arc(cx,H-6,r,Math.PI,0);sctx.stroke();
-        sctx.strokeStyle=color;sctx.lineWidth=3;
-        sctx.beginPath();sctx.arc(cx,H-6,r,Math.PI,a,true);sctx.stroke();
-        const nx=cx+r*Math.cos(a),ny=(H-6)+r*Math.sin(a);
-        sctx.strokeStyle='#fff';sctx.lineWidth=1.5;
-        sctx.beginPath();sctx.moveTo(cx,H-6);sctx.lineTo(nx,ny);sctx.stroke();
-        sctx.fillStyle='#555';sctx.font='8px monospace';sctx.fillText(label,cx-7,H+4);
-        sctx.fillStyle=color;sctx.fillText(Math.round(deg)+'°',cx-10,H-6-r-3);
+        const r=28, a=Math.PI-(deg/180)*Math.PI;
+        sctx.strokeStyle='#141a14';sctx.lineWidth=6;
+        sctx.beginPath();sctx.arc(cx,H-4,r,Math.PI,0);sctx.stroke();
+        sctx.strokeStyle=color+'66';sctx.lineWidth=4;
+        sctx.beginPath();sctx.arc(cx,H-4,r,Math.PI,a,true);sctx.stroke();
+        sctx.strokeStyle=color;sctx.lineWidth=2;
+        sctx.beginPath();sctx.arc(cx,H-4,r,Math.PI,a,true);sctx.stroke();
+        const nx=cx+r*Math.cos(a),ny=(H-4)+r*Math.sin(a);
+        sctx.strokeStyle='#fff';sctx.lineWidth=2;
+        sctx.beginPath();sctx.moveTo(cx,H-4);sctx.lineTo(nx,ny);sctx.stroke();
+        sctx.fillStyle=color;sctx.font='bold 9px monospace';
+        sctx.fillText(Math.round(deg)+'°',cx-12,H-4-r-5);
+        sctx.fillStyle='#555';sctx.font='8px monospace';sctx.fillText(label,cx-8,H+8);
       };
-      arc(50, 'PAN', panDeg, '#4488ff');
-      arc(144,'TILT',tiltDeg,'#44ddaa');
+      arc(58,  'PAN',  panDeg,  '#4488ff');
+      arc(175, 'TILT', tiltDeg, '#44ddaa');
     }
-    drawServoArcs(90,90);
+    drawServoArcs(90, 90);
 
     // ── Joystick canvas ───────────────────────────────────────────────────
     const jc = document.getElementById('joy-canvas');
     const jctx = jc.getContext('2d');
     function drawStick(cx,cy,r,sx,sy,color){
-      jctx.strokeStyle='#2a3a2a';jctx.lineWidth=2;
+      jctx.strokeStyle='#1e2e1e';jctx.lineWidth=2;
       jctx.beginPath();jctx.arc(cx,cy,r,0,Math.PI*2);jctx.stroke();
-      jctx.strokeStyle='#1e2e1e';jctx.lineWidth=1;
+      jctx.strokeStyle='#162216';jctx.lineWidth=1;
       jctx.beginPath();jctx.moveTo(cx-r,cy);jctx.lineTo(cx+r,cy);jctx.stroke();
       jctx.beginPath();jctx.moveTo(cx,cy-r);jctx.lineTo(cx,cy+r);jctx.stroke();
-      const dx=cx+sx*r*0.8, dy=cy-sy*r*0.8;
-      jctx.fillStyle=color+'44';jctx.beginPath();jctx.arc(dx,dy,r*0.32,0,Math.PI*2);jctx.fill();
-      jctx.strokeStyle=color;jctx.lineWidth=2;jctx.beginPath();jctx.arc(dx,dy,r*0.32,0,Math.PI*2);jctx.stroke();
+      const dx=cx+sx*r*0.78, dy=cy-sy*r*0.78;
+      jctx.fillStyle=color+'33';jctx.beginPath();jctx.arc(dx,dy,r*0.3,0,Math.PI*2);jctx.fill();
+      jctx.strokeStyle=color;jctx.lineWidth=2;jctx.beginPath();jctx.arc(dx,dy,r*0.3,0,Math.PI*2);jctx.stroke();
     }
     function drawTrigger(x,y,w,h,val,label){
-      jctx.fillStyle='#1a2a1a';jctx.fillRect(x,y,w,h);
-      jctx.fillStyle=val>0.05?'#88ff44':'#2a3a2a';jctx.fillRect(x,y+h*(1-val),w,h*val);
-      jctx.strokeStyle='#2a3a2a';jctx.lineWidth=1;jctx.strokeRect(x,y,w,h);
-      jctx.fillStyle='#444';jctx.font='7px monospace';jctx.fillText(label,x,y+h+8);
+      jctx.fillStyle='#0d1a0d';jctx.fillRect(x,y,w,h);
+      jctx.fillStyle=val>0.05?'#88ff44':'#1e2e1e';jctx.fillRect(x,y+h*(1-val),w,h*val);
+      jctx.strokeStyle='#1e2e1e';jctx.lineWidth=1;jctx.strokeRect(x,y,w,h);
+      jctx.fillStyle='#444';jctx.font='7px monospace';jctx.fillText(label,x,y+h+9);
     }
     function drawController(lx,ly,rx,ry,lt,rt,connected){
       jctx.clearRect(0,0,jc.width,jc.height);
-      const color=connected?'#00ff88':'#333';
-      drawTrigger(6,8,10,34,lt,'LT');
-      drawTrigger(178,8,10,34,rt,'RT');
-      drawStick(58, 52, 34, lx, ly, color);
-      drawStick(136,52, 34, rx, ry, color);
+      const color=connected?'#00ff88':'#2a3a2a';
+      drawTrigger(8,8,11,38,lt,'LT');
+      drawTrigger(214,8,11,38,rt,'RT');
+      drawStick(68, 58, 36, lx, ly, color);
+      drawStick(165,58, 36, rx, ry, color);
     }
     drawController(0,0,0,0,0,0,false);
 
     // ── Status poll ───────────────────────────────────────────────────────
-    const badge   = document.getElementById('state-badge');
-    const msg     = document.getElementById('msg-bar');
-    const btnAuto = document.getElementById('btn-auto');
+    const badge = document.getElementById('state-badge');
+    const msg   = document.getElementById('msg-bar');
 
     async function poll() {
       try {
         const d = await fetch('/status').then(r=>r.json());
-        const {state,pan_err,tilt_err,tx,ty,tw,th,pan_angle,tilt_angle,auto_lock} = d;
+        const {state,pan_err,tilt_err,tx,ty,tw,th,pan_angle,tilt_angle} = d;
         badge.className='s-'+state; badge.textContent=state.toUpperCase();
-        document.getElementById('btn-lock').classList.toggle('active',state==='locked');
-        btnAuto.textContent='Auto-Lock: '+(auto_lock?'ON':'OFF');
-        btnAuto.style.color=auto_lock?'#000':'var(--amber)';
-        btnAuto.style.background=auto_lock?'var(--amber)':'transparent';
         const has=tw>0;
-        document.getElementById('tele-pos').textContent  = has?`${tx}, ${ty}`:'—';
-        document.getElementById('tele-size').textContent = has?`${tw} × ${th}`:'—';
+        document.getElementById('tele-pos').textContent  = has?`${tx} · ${ty}`:'— · —';
+        document.getElementById('tele-size').textContent = has?`${tw} × ${th}`:'— × —';
+        document.getElementById('tele-pan-err').textContent  = (pan_err>=0?'+':'')+pan_err;
+        document.getElementById('tele-tilt-err').textContent = (tilt_err>=0?'+':'')+tilt_err;
         setBar('bar-pan','val-pan',pan_err,320);
         setBar('bar-tilt','val-tilt',tilt_err,240);
         drawAim(has?tx:0,has?ty:0,state==='locked');
-        setServoBar('bar-sv-pan','sv-pan',pan_angle);
-        setServoBar('bar-sv-tilt','sv-tilt',tilt_angle);
+        setServoAngle('sv-pan-big','bar-sv-pan',pan_angle);
+        setServoAngle('sv-tilt-big','bar-sv-tilt',tilt_angle);
         drawServoArcs(pan_angle,tilt_angle);
         if(state==='searching') msg.textContent='Re-acquiring...';
-        else if(state==='idle'&&msg.textContent==='Re-acquiring...') msg.textContent='Lost — IDLE.';
-        else if(state==='locked'&&msg.textContent.match(/Lock|Re-|Locking/)) msg.textContent=auto_lock?'Auto-locked.':'Locked.';
+        else if(state==='idle'&&msg.textContent==='Re-acquiring...') msg.textContent='Lost.';
       } catch(_) {}
       setTimeout(poll,400);
     }
     poll();
+
+    document.getElementById('feed').addEventListener('click', async function(e) {
+      if (mouseOn) return;
+      const rect = this.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top)  / rect.height;
+      msg.textContent = 'Locking…';
+      await fetch('/click-lock', {method:'POST', headers:{'Content-Type':'application/json'},
+                                  body: JSON.stringify({x, y})});
+      await new Promise(r => setTimeout(r, 500));
+      const {state} = await fetch('/status').then(r=>r.json());
+      msg.textContent = state==='locked' ? 'Locked.' : 'Lock failed — try again.';
+    });
 
     async function pollJoy() {
       try {
@@ -389,22 +515,72 @@
     }
     pollJoy();
 
-    // ── Buttons ───────────────────────────────────────────────────────────
-    async function lockTarget() {
-      msg.textContent='Locking…';
-      await fetch('/lock',{method:'POST'});
-      await new Promise(r=>setTimeout(r,450));
-      const {state}=await fetch('/status').then(r=>r.json());
-      if(state!=='locked') msg.textContent='No target visible.';
-    }
     async function resetTracker() {
       await fetch('/reset',{method:'POST'});
       msg.textContent='Reset.';
     }
-    async function toggleAuto() {
-      const {auto_lock}=await fetch('/auto-lock',{method:'POST'}).then(r=>r.json());
-      msg.textContent=auto_lock?'Auto-lock ON.':'Auto-lock OFF.';
+
+    // ── Mouse control ─────────────────────────────────────────────────────
+    let mouseOn = false;
+    let lastMouseSend = 0;
+    const feedEl  = document.getElementById('feed');
+    const mouseOv = document.getElementById('mouse-overlay');
+    const mouseCtx= mouseOv.getContext('2d');
+
+    function drawCrosshair(px, py) {
+      const W = feedEl.offsetWidth, H = feedEl.offsetHeight;
+      if (mouseOv.width !== W)  mouseOv.width  = W;
+      if (mouseOv.height !== H) mouseOv.height = H;
+      mouseCtx.clearRect(0, 0, W, H);
+      mouseCtx.strokeStyle = 'rgba(255,136,0,0.9)';
+      mouseCtx.lineWidth = 1.5;
+      const r = 12;
+      mouseCtx.beginPath();
+      mouseCtx.moveTo(px-r-8,py); mouseCtx.lineTo(px-4,py);
+      mouseCtx.moveTo(px+4,py);   mouseCtx.lineTo(px+r+8,py);
+      mouseCtx.moveTo(px,py-r-8); mouseCtx.lineTo(px,py-4);
+      mouseCtx.moveTo(px,py+4);   mouseCtx.lineTo(px,py+r+8);
+      mouseCtx.stroke();
+      mouseCtx.strokeStyle = 'rgba(255,136,0,0.6)';
+      mouseCtx.lineWidth = 1;
+      mouseCtx.beginPath(); mouseCtx.arc(px, py, r, 0, Math.PI*2); mouseCtx.stroke();
+      mouseCtx.fillStyle = 'rgba(255,136,0,0.3)';
+      mouseCtx.beginPath(); mouseCtx.arc(px, py, 3, 0, Math.PI*2); mouseCtx.fill();
     }
+
+    async function toggleMouse() {
+      const {mouse_control} = await fetch('/mouse-toggle',{method:'POST'}).then(r=>r.json());
+      mouseOn = mouse_control;
+      const btn = document.getElementById('btn-mouse');
+      btn.textContent = 'Mouse: '+(mouseOn?'ON':'OFF');
+      btn.classList.toggle('active', mouseOn);
+      mouseOv.style.display = mouseOn ? 'block' : 'none';
+      feedEl.style.cursor   = mouseOn ? 'none'  : 'crosshair';
+      if (mouseOn) { mouseOv.width = feedEl.offsetWidth; mouseOv.height = feedEl.offsetHeight; }
+      else mouseCtx.clearRect(0,0,mouseOv.width,mouseOv.height);
+    }
+
+    feedEl.addEventListener('mousemove', function(e) {
+      const rect = feedEl.getBoundingClientRect();
+      const x = Math.max(0, Math.min(1, (e.clientX-rect.left)/rect.width));
+      const y = Math.max(0, Math.min(1, (e.clientY-rect.top) /rect.height));
+      if (mouseOn) {
+        drawCrosshair(x*feedEl.offsetWidth, y*feedEl.offsetHeight);
+        const now = Date.now();
+        if (now - lastMouseSend >= 50) {
+          lastMouseSend = now;
+          fetch('/mouse-move',{method:'POST',headers:{'Content-Type':'application/json'},
+                               body:JSON.stringify({x,y})});
+        }
+      }
+    });
+
+    feedEl.addEventListener('mouseleave', function() {
+      if (!mouseOn) return;
+      mouseCtx.clearRect(0,0,mouseOv.width,mouseOv.height);
+      fetch('/mouse-move',{method:'POST',headers:{'Content-Type':'application/json'},
+                           body:JSON.stringify({x:0.5,y:0.5})});
+    });
   </script>
 </body>
 </html>
