@@ -1,586 +1,700 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Skebob Robotec — Tracker</title>
-  <style>
-    :root {
-      --green:  #00ff88;
-      --amber:  #ffaa00;
-      --red:    #ff4444;
-      --blue:   #4488ff;
-      --teal:   #44ddaa;
-      --bg:     #080c0a;
-      --panel:  #0d1210;
-      --border: #1a2e1a;
-      --dim:    #3a4a3a;
-      --text:   #b8ccb8;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-      height: 100%; overflow: hidden;
-      background: var(--bg); color: var(--text);
-      font-family: 'Courier New', monospace;
-    }
-    body { display: flex; flex-direction: column; padding: 6px; gap: 6px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PTTS MK-IV // PAN-TILT TRACKING SYSTEM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=VT323&family=Russo+One&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #0b0c07;
+  --panel:      #0f110a;
+  --panel2:     #13160d;
+  --olive:      #3a4220;
+  --olive-lt:   #4e5a28;
+  --amber:      #c8a135;
+  --amber-glow: #e8b840;
+  --amber-dim:  #7a6020;
+  --green-ph:   #7ab020;
+  --green-bright:#a8d030;
+  --red-alert:  #c83018;
+  --red-bright: #ff4422;
+  --khaki:      #8a9060;
+  --khaki-dim:  #4a5030;
+  --text:       #b8c890;
+  --text-dim:   #5a6840;
+  --white:      #d0d8b0;
+  --font-stencil: 'Black Ops One', 'Russo One', monospace;
+  --font-mono:    'VT323', monospace;
+  --scanline: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 4px
+  );
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── Header ── */
-    header {
-      display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid var(--border); padding-bottom: 5px;
-      flex-shrink: 0; position: relative;
-    }
-    header::after {
-      content: ''; position: absolute; bottom: -1px; left: 0;
-      width: 40%; height: 1px; background: var(--green);
-      box-shadow: 0 0 8px var(--green);
-    }
-    .logo {
-      color: var(--green); font-size: 1.05rem; letter-spacing: 4px;
-      text-shadow: 0 0 12px rgba(0,255,136,.4);
-    }
-    .logo span { color: var(--dim); font-size: 0.6rem; letter-spacing: 2px; margin-left: 8px; }
-    .header-right { display: flex; align-items: center; gap: 18px; }
-    .hdr-stat { font-size: 0.6rem; color: var(--dim); letter-spacing: 1px; text-align: right; }
-    .hdr-stat b { color: var(--text); display: block; font-size: 0.7rem; }
-    .live-pill {
-      display: flex; align-items: center; gap: 6px;
-      border: 1px solid var(--border); border-radius: 20px;
-      padding: 3px 10px; font-size: 0.65rem;
-    }
-    .live-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--green); box-shadow: 0 0 6px var(--green);
-      animation: blink 1.4s infinite;
-    }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.15} }
-    .live-label { color: var(--green); letter-spacing: 2px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  height: 100vh;
+  display: grid;
+  grid-template-rows: 58px 1fr 160px;
+  grid-template-columns: 1fr 360px;
+  overflow: hidden;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: var(--scanline);
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.35;
+}
 
-    /* ── Grid ── */
-    .main-grid {
-      flex: 1; min-height: 0;
-      display: grid;
-      grid-template-columns: 1fr 270px 270px;
-      gap: 6px;
-    }
+/* HEADER */
+header {
+  grid-column: 1 / -1;
+  background: var(--olive);
+  border-bottom: 3px solid var(--amber);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+}
+header::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    -45deg, transparent, transparent 8px,
+    rgba(0,0,0,0.18) 8px, rgba(0,0,0,0.18) 16px
+  );
+  pointer-events: none;
+}
+.hdr-classification {
+  font-family: var(--font-stencil);
+  font-size: 0.58rem;
+  letter-spacing: 0.3em;
+  color: var(--red-bright);
+  background: rgba(200,48,24,0.2);
+  padding: 3px 10px;
+  border: 1px solid var(--red-bright);
+  animation: blink-slow 2s step-end infinite;
+  position: relative; z-index:1;
+}
+@keyframes blink-slow { 0%,100%{opacity:1}50%{opacity:0.35} }
+.hdr-title {
+  font-family: var(--font-stencil);
+  font-size: 1.05rem;
+  letter-spacing: 0.1em;
+  color: var(--amber-glow);
+  text-shadow: 0 0 14px rgba(232,184,64,0.7);
+  position: relative; z-index:1;
+}
+.hdr-sub {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--khaki);
+  letter-spacing: 0.07em;
+  position: relative; z-index:1;
+}
+#state-badge {
+  font-family: var(--font-stencil);
+  font-size: 0.82rem;
+  letter-spacing: 0.18em;
+  padding: 5px 16px;
+  border: 2px solid currentColor;
+  transition: color 0.2s, box-shadow 0.2s;
+  clip-path: polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+  position: relative; z-index:1;
+}
+.badge-idle      { color: var(--khaki-dim); }
+.badge-locked    { color: var(--green-bright); box-shadow: 0 0 14px rgba(168,208,48,0.65), inset 0 0 10px rgba(168,208,48,0.1); animation: locked-pulse 1.4s ease-in-out infinite; }
+.badge-searching { color: var(--amber-glow);  box-shadow: 0 0 12px rgba(232,184,64,0.5); animation: blink-slow 0.7s step-end infinite; }
+.badge-chassis { animation: chassis-flash 0.4s step-end infinite !important; }
+@keyframes chassis-flash { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
-    /* ── Feed ── */
-    .feed-wrap {
-      background: #000; position: relative; height: 100%;
-      border: 1px solid var(--border); border-radius: 3px; overflow: hidden;
-    }
-    /* HUD corner brackets */
-    .feed-wrap::before, .feed-wrap::after,
-    .feed-corner-bl, .feed-corner-br {
-      content: ''; position: absolute; width: 18px; height: 18px;
-      pointer-events: none; z-index: 2;
-    }
-    .feed-wrap::before { top: 6px; left: 6px; border-top: 2px solid var(--green); border-left: 2px solid var(--green); }
-    .feed-wrap::after  { top: 6px; right: 6px; border-top: 2px solid var(--green); border-right: 2px solid var(--green); }
-    .feed-corner-bl { bottom: 6px; left: 6px; border-bottom: 2px solid var(--green); border-left: 2px solid var(--green); }
-    .feed-corner-br { bottom: 6px; right: 6px; border-bottom: 2px solid var(--green); border-right: 2px solid var(--green); }
-    #feed { width: 100%; height: 100%; object-fit: contain; display: block; cursor: crosshair; }
-    .feed-scanline {
-      position: absolute; inset: 0; pointer-events: none; z-index: 1;
-      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.08) 2px, rgba(0,0,0,.08) 4px);
-    }
-    .feed-overlay {
-      position: absolute; bottom: 10px; left: 14px; z-index: 3;
-      font-size: 0.6rem; color: rgba(0,255,136,.45); letter-spacing: 1px;
-      pointer-events: none;
-    }
-    #mouse-overlay { position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:none;z-index:3; }
+.hdr-spacer { flex: 1; }
+.hdr-right { display:flex; flex-direction:column; align-items:flex-end; gap:1px; position:relative; z-index:1; }
+#fps-counter { font-family:var(--font-mono); font-size:1rem; color:var(--amber-dim); letter-spacing:0.08em; }
+#fps-counter span { color:var(--amber-glow); }
+.hdr-time { font-family:var(--font-mono); font-size:0.8rem; color:var(--khaki-dim); letter-spacing:0.05em; }
 
-    /* ── Columns ── */
-    .col { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+/* VIDEO */
+#video-wrap {
+  grid-row: 2; grid-column: 1;
+  position: relative;
+  background: #000;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  cursor: crosshair;
+  border-right: 2px solid var(--olive);
+}
+#video-wrap::before, #video-wrap::after {
+  content: ''; position: absolute;
+  width: 30px; height: 30px;
+  border-color: var(--amber); border-style: solid;
+  z-index: 10; pointer-events: none;
+}
+#video-wrap::before { top:8px; left:8px; border-width:2px 0 0 2px; }
+#video-wrap::after  { bottom:8px; right:8px; border-width:0 2px 2px 0; }
+.vcorner { position:absolute; width:30px; height:30px; border-color:var(--amber); border-style:solid; z-index:10; pointer-events:none; }
+.vcorner-tr { top:8px; right:8px; border-width:2px 2px 0 0; }
+.vcorner-bl { bottom:8px; left:8px; border-width:0 0 2px 2px; }
 
-    /* ── Panel ── */
-    .panel {
-      background: var(--panel); border: 1px solid var(--border);
-      border-radius: 3px; padding: 10px;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .panel-title {
-      font-size: 0.55rem; letter-spacing: 3px; color: var(--dim);
-      text-transform: uppercase; border-bottom: 1px solid var(--border);
-      padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center;
-    }
-    .panel-title-accent { color: var(--green); font-size: 0.6rem; }
+#cam {
+  /* Fill the entire panel. object-fit:contain keeps 4:3 ratio with black bars.
+     width/height:100% is required for MJPEG — browser has no intrinsic size. */
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: saturate(0.8) sepia(0.1) hue-rotate(25deg);
+}
+#click-overlay { position:absolute; inset:0; pointer-events:none; }
 
-    /* ── State badge ── */
-    .state-row { display: flex; align-items: center; justify-content: space-between; }
-    #state-badge {
-      display: inline-block; padding: 4px 14px; border-radius: 2px;
-      font-size: 1.1rem; letter-spacing: 3px; font-weight: bold;
-      transition: background .3s, color .3s, box-shadow .3s;
-    }
-    .s-idle     { background: #141a14; color: var(--dim); border: 1px solid #1e2e1e; }
-    .s-locked   { background: rgba(0,255,136,.15); color: var(--green); border: 1px solid var(--green);
-                  box-shadow: 0 0 12px rgba(0,255,136,.25); }
-    .s-searching{ background: rgba(255,170,0,.15); color: var(--amber); border: 1px solid var(--amber);
-                  animation: pulse .7s infinite alternate; }
-    @keyframes pulse { from{opacity:1} to{opacity:.4} }
+.click-flash {
+  position: absolute;
+  width: 60px; height: 60px;
+  border: 2px solid var(--amber-glow);
+  pointer-events: none;
+  transform: translate(-50%,-50%);
+  animation: acq 0.55s ease-out forwards;
+  box-shadow: 0 0 12px rgba(232,184,64,0.7), inset 0 0 8px rgba(232,184,64,0.2);
+}
+@keyframes acq { 0%{transform:translate(-50%,-50%) scale(1.6);opacity:1} 100%{transform:translate(-50%,-50%) scale(0.7);opacity:0} }
 
-    /* ── Big telemetry numbers ── */
-    .tele-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
-    }
-    .tele-cell {
-      background: #0a0f0a; border: 1px solid var(--border); border-radius: 3px;
-      padding: 8px 10px;
-    }
-    .tele-cell-label { font-size: 0.5rem; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
-    .tele-cell-val {
-      font-size: 1.7rem; font-weight: bold; color: var(--green);
-      letter-spacing: 1px; line-height: 1.15; margin-top: 3px;
-      text-shadow: 0 0 10px rgba(0,255,136,.35);
-    }
-    .tele-cell-val.amber { color: var(--amber); text-shadow: 0 0 10px rgba(255,170,0,.35); }
-    .tele-cell-val.blue  { color: var(--blue);  text-shadow: 0 0 10px rgba(68,136,255,.35); }
+#mouse-reticle {
+  position:absolute; pointer-events:none; display:none;
+  transform:translate(-50%,-50%);
+  width:32px; height:32px;
+}
+#mouse-reticle::before {
+  content:''; position:absolute;
+  top:50%; left:0; right:0; height:1px;
+  background: var(--amber-glow);
+  box-shadow: 0 0 6px rgba(232,184,64,0.8);
+}
+#mouse-reticle::after {
+  content:''; position:absolute;
+  left:50%; top:0; bottom:0; width:1px;
+  background: var(--amber-glow);
+  box-shadow: 0 0 6px rgba(232,184,64,0.8);
+}
 
-    /* ── Error bars ── */
-    .bar-section-title { font-size: 0.5rem; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
-    .bar-row { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; }
-    .bar-label { color: var(--dim); width: 30px; flex-shrink: 0; letter-spacing: 1px; }
-    .bar-track {
-      flex: 1; height: 8px; background: #0d1a0d; border-radius: 4px;
-      overflow: hidden; position: relative; border: 1px solid var(--border);
-    }
-    .bar-fill {
-      height: 100%; width: 0%; border-radius: 4px;
-      background: var(--green); transition: width .1s, background .2s, left .1s;
-      position: absolute; top: 0;
-    }
-    .bar-val { color: var(--text); width: 42px; text-align: right; flex-shrink: 0; font-size: 0.9rem; font-weight: bold; }
+/* TELEMETRY STRIP */
+#tele-strip {
+  grid-row: 3; grid-column: 1;
+  background: var(--panel2);
+  border-top: 3px solid var(--olive);
+  border-right: 2px solid var(--olive);
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+}
+.tele-cell {
+  border-right: 1px solid var(--olive);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  overflow: hidden;
+}
+.tele-cell::before {
+  content:''; position:absolute; top:0; left:0; right:0;
+  height:2px; background:var(--olive-lt);
+}
+.tele-cell:last-child { border-right:none; }
+.tele-key {
+  font-family: var(--font-stencil);
+  font-size: 0.58rem;
+  letter-spacing: 0.22em;
+  color: var(--khaki-dim);
+  text-transform: uppercase;
+}
+.tele-big {
+  font-family: var(--font-mono);
+  font-size: 3rem;
+  line-height: 1;
+  color: var(--green-bright);
+  text-shadow: 0 0 18px rgba(168,208,48,0.65);
+  letter-spacing: 0.03em;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+.tele-big.amber { color: var(--amber-glow); text-shadow: 0 0 18px rgba(232,184,64,0.65); }
+.tele-big.red   { color: var(--red-bright);  text-shadow: 0 0 18px rgba(255,68,34,0.7); }
+.tele-unit {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  letter-spacing: 0.14em;
+}
+.tele-errbar {
+  height: 5px;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid var(--olive-lt);
+  position: relative; overflow: hidden; margin-top: 2px;
+}
+.tele-errfill {
+  position:absolute; height:100%; top:0;
+  width:0%; transition: width 0.1s, left 0.1s;
+}
 
-    /* ── Aim canvas ── */
-    #aim-canvas { width: 100%; display: block; border-radius: 3px; border: 1px solid var(--border); }
+/* SIDEBAR */
+aside {
+  grid-row: 2 / 4; grid-column: 2;
+  background: var(--panel);
+  border-left: 3px solid var(--olive);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+aside::-webkit-scrollbar { width:4px; }
+aside::-webkit-scrollbar-track { background:var(--bg); }
+aside::-webkit-scrollbar-thumb { background:var(--olive); }
 
-    /* ── Buttons ── */
-    .btn-row { display: flex; gap: 6px; }
-    button {
-      flex: 1; padding: 7px 0; font-family: inherit; font-size: 0.7rem;
-      letter-spacing: 2px; border: 1px solid; border-radius: 3px;
-      cursor: pointer; background: transparent;
-      transition: background .15s, color .15s, box-shadow .15s; text-transform: uppercase;
-    }
-    #btn-reset { color: var(--red); border-color: var(--red); }
-    #btn-reset:hover { background: var(--red); color: #000; box-shadow: 0 0 10px rgba(255,68,68,.4); }
-    #btn-mouse { color: var(--amber); border-color: var(--amber); }
-    #btn-mouse:hover { background: rgba(255,170,0,.15); }
-    #btn-mouse.active { background: var(--amber); color: #000; box-shadow: 0 0 10px rgba(255,170,0,.4); }
-    #msg-bar { font-size: 0.65rem; color: var(--amber); min-height: 1em; letter-spacing: 1px; }
+.panel-section {
+  border-bottom: 2px solid var(--olive);
+  padding: 11px 14px;
+}
+.section-title {
+  font-family: var(--font-stencil);
+  font-size: 0.62rem;
+  letter-spacing: 0.26em;
+  color: var(--amber-dim);
+  margin-bottom: 9px;
+  display: flex; align-items: center; gap: 7px;
+}
+.section-title::before { content:'▶'; font-size:0.48rem; color:var(--olive-lt); }
 
-    /* ── Servo angles (big) ── */
-    .servo-angles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .servo-angle-cell {
-      background: #0a0f0a; border: 1px solid var(--border); border-radius: 3px; padding: 8px 10px; text-align: center;
-    }
-    .servo-angle-label { font-size: 0.5rem; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
-    .servo-angle-val { font-size: 2rem; font-weight: bold; line-height: 1.1; margin-top: 3px; }
-    .servo-angle-val.pan  { color: var(--blue);  text-shadow: 0 0 10px rgba(68,136,255,.3); }
-    .servo-angle-val.tilt { color: var(--teal); text-shadow: 0 0 10px rgba(68,221,170,.3); }
+/* Gauges */
+.gauge-row { display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+.gauge-label { font-family:var(--font-stencil); font-size:0.62rem; color:var(--khaki-dim); width:34px; flex-shrink:0; letter-spacing:0.1em; }
+.gauge-track {
+  flex:1; height:10px;
+  background:rgba(0,0,0,0.5); border:1px solid var(--olive-lt);
+  position:relative; overflow:hidden;
+}
+.gauge-track::after { content:''; position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--olive-lt); }
+.gauge-fill {
+  position:absolute; height:100%;
+  background:var(--amber);
+  box-shadow: 0 0 8px rgba(200,161,53,0.7);
+  transition: width 0.1s, left 0.1s;
+}
+.gauge-val { font-family:var(--font-mono); font-size:1.05rem; color:var(--amber-glow); width:54px; text-align:right; flex-shrink:0; }
 
-    .servo-bar-row { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; }
-    .servo-bar-label { color: var(--dim); width: 30px; flex-shrink: 0; }
-    .servo-bar-track {
-      flex: 1; height: 6px; background: #0a0f18; border-radius: 3px;
-      overflow: hidden; position: relative; border: 1px solid #1a1a2e;
-    }
-    .servo-bar-fill { height: 100%; border-radius: 3px; position: absolute; top: 0; left: 0; transition: width .15s; }
-    #bar-sv-pan  .servo-bar-fill { background: var(--blue); }
-    #bar-sv-tilt .servo-bar-fill { background: var(--teal); }
+/* Buttons */
+.btn-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+.btn {
+  font-family: var(--font-stencil);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  padding: 8px 6px;
+  background: transparent;
+  border: 1px solid var(--olive-lt);
+  color: var(--text-dim);
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.12s;
+  clip-path: polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
+  position: relative;
+}
+.btn::after { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(255,255,255,0.04) 0%,transparent 55%); }
+.btn:hover  { border-color:var(--amber); color:var(--amber-glow); background:rgba(200,161,53,0.08); box-shadow:0 0 8px rgba(200,161,53,0.3); }
+.btn:active { transform:scale(0.96); }
+.btn.danger { border-color:var(--red-alert); color:var(--red-bright); }
+.btn.danger:hover { background:rgba(200,48,24,0.15); box-shadow:0 0 8px rgba(200,48,24,0.4); }
+.btn.active-btn { border-color:var(--green-ph); color:var(--green-bright); background:rgba(122,176,32,0.1); }
+.btn.wide { grid-column:1/-1; }
 
-    /* ── Motor bars ── */
-    .motor-row { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; }
-    .motor-label { color: var(--dim); width: 36px; flex-shrink: 0; font-size: 0.6rem; }
-    .motor-track {
-      flex: 1; height: 8px; background: #0d1a0d; border-radius: 4px;
-      overflow: hidden; position: relative; border: 1px solid var(--border);
-    }
-    .motor-fill {
-      height: 100%; width: 0%; border-radius: 4px;
-      position: absolute; top: 0; transition: width .08s, left .08s, background .15s;
-    }
-    .motor-val { width: 36px; text-align: right; flex-shrink: 0; font-size: 0.75rem; font-weight: bold; }
-  </style>
+/* Color IFF */
+.color-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+#color-swatch {
+  width:44px; height:44px;
+  border:2px solid var(--olive-lt);
+  background:#111208;
+  clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+  flex-shrink:0;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.color-conf-label { font-family:var(--font-stencil); font-size:0.52rem; color:var(--khaki-dim); letter-spacing:0.18em; margin-bottom:4px; }
+.color-bar-track { height:10px; background:rgba(0,0,0,0.5); border:1px solid var(--olive-lt); overflow:hidden; margin-bottom:3px; }
+#color-conf-bar { height:100%; width:0%; background:var(--green-ph); transition:width 0.15s, background 0.2s; }
+#color-conf-val { font-family:var(--font-mono); font-size:0.95rem; color:var(--text); }
+
+/* Joystick */
+.joy-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:6px; }
+.joy-wrap { display:flex; flex-direction:column; align-items:center; gap:5px; }
+.joy-label { font-family:var(--font-stencil); font-size:0.52rem; color:var(--khaki-dim); letter-spacing:0.18em; }
+.joy-pad {
+  width:80px; height:80px;
+  border:1px solid var(--olive-lt);
+  background:rgba(0,0,0,0.4);
+  position:relative;
+  clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+}
+.joy-pad::before,.joy-pad::after { content:''; position:absolute; background:var(--olive-lt); opacity:0.4; }
+.joy-pad::before { top:50%; left:0; right:0; height:1px; }
+.joy-pad::after  { left:50%; top:0; bottom:0; width:1px; }
+.joy-dot {
+  position:absolute; width:10px; height:10px;
+  background:var(--amber-glow);
+  box-shadow:0 0 8px rgba(232,184,64,0.8);
+  clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  transition:top 0.06s, left 0.06s;
+}
+#joy-name { font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); text-align:center; letter-spacing:0.04em; }
+
+/* Log */
+#log-box { font-family:var(--font-mono); font-size:0.8rem; color:var(--text-dim); line-height:1.45; max-height:90px; overflow-y:auto; letter-spacing:0.03em; }
+#log-box::-webkit-scrollbar { width:3px; }
+#log-box::-webkit-scrollbar-thumb { background:var(--olive); }
+</style>
 </head>
 <body>
 
-  <header>
-    <div>
-      <div class="logo">SKEBOB ROBOTEC <span>· AERIAL TARGET TRACKER v0.3</span></div>
+<header>
+  <div class="hdr-classification">⚠ RESTRICTED</div>
+  <div>
+    <div class="hdr-title">PTTS MK-IV // PAN-TILT TRACKING SYSTEM</div>
+    <div class="hdr-sub">UNIT 04 · OPTICAL ACQUISITION MODULE · ARMED</div>
+  </div>
+  <div id="state-badge" class="badge-idle">IDLE</div>
+  <div class="hdr-spacer"></div>
+  <div class="hdr-right">
+    <div id="fps-counter">FPS <span id="fps-val">--</span></div>
+    <div class="hdr-time" id="hdr-clock">--:--:--Z</div>
+  </div>
+</header>
+
+<div id="video-wrap">
+  <div class="vcorner vcorner-tr"></div>
+  <div class="vcorner vcorner-bl"></div>
+  <img id="cam" src="/video" alt="FEED">
+  <div id="click-overlay"></div>
+  <div id="mouse-reticle"></div>
+  <!-- Shown only in IDLE state -->
+  <div id="idle-hint" style="
+    position:absolute; inset:0; pointer-events:none;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:10px;
+    background: rgba(0,0,0,0.45);
+  ">
+    <div style="
+      font-family:var(--font-stencil);
+      font-size:1.6rem;
+      color:var(--amber-glow);
+      letter-spacing:0.15em;
+      text-shadow:0 0 20px rgba(232,184,64,0.8);
+      animation: blink-slow 1.8s step-end infinite;
+    ">⊕ CLICK TO ACQUIRE TARGET</div>
+    <div style="font-family:var(--font-mono);font-size:1rem;color:var(--khaki);letter-spacing:0.1em;">
+      SELECT AN OBJECT IN THE FEED TO BEGIN TRACKING
     </div>
-    <div class="header-right">
-      <div class="hdr-stat"><span>FRAME</span><b>640×480</b></div>
-      <div class="hdr-stat"><span>FPS</span><b>15</b></div>
-      <div class="live-pill">
-        <span class="live-dot" id="live-dot"></span>
-        <span class="live-label" id="live-label">CONNECTING</span>
-      </div>
+  </div>
+</div>
+
+<div id="tele-strip">
+  <div class="tele-cell">
+    <div class="tele-key">TGT · X</div>
+    <div class="tele-big" id="tele-tx">---</div>
+    <div class="tele-unit">PX</div>
+  </div>
+  <div class="tele-cell">
+    <div class="tele-key">TGT · Y</div>
+    <div class="tele-big" id="tele-ty">---</div>
+    <div class="tele-unit">PX</div>
+  </div>
+  <div class="tele-cell">
+    <div class="tele-key">PAN ERR</div>
+    <div class="tele-big amber" id="tele-pan-err">+000</div>
+    <div class="tele-errbar">
+      <div class="tele-errfill" id="terr-pan-neg" style="right:50%;background:var(--red-bright)"></div>
+      <div class="tele-errfill" id="terr-pan-pos" style="left:50%;background:var(--amber)"></div>
     </div>
-  </header>
-
-  <div class="main-grid">
-
-    <!-- ── Col 1: Feed ── -->
-    <div class="feed-wrap">
-      <img id="feed" src="/video" alt="feed" onload="onStreamOk()" onerror="onStreamErr()">
-      <canvas id="mouse-overlay"></canvas>
-      <div class="feed-scanline"></div>
-      <div class="feed-corner-bl"></div>
-      <div class="feed-corner-br"></div>
-      <div class="feed-overlay">640 × 480 · 15 fps · click to lock</div>
+    <div class="tele-unit">PX</div>
+  </div>
+  <div class="tele-cell">
+    <div class="tele-key">TILT ERR</div>
+    <div class="tele-big amber" id="tele-tilt-err">+000</div>
+    <div class="tele-errbar">
+      <div class="tele-errfill" id="terr-tilt-neg" style="right:50%;background:var(--red-bright)"></div>
+      <div class="tele-errfill" id="terr-tilt-pos" style="left:50%;background:var(--amber)"></div>
     </div>
+    <div class="tele-unit">PX</div>
+  </div>
+  <div class="tele-cell">
+    <div class="tele-key">PAN ANG</div>
+    <div class="tele-big" id="tele-pan-ang">090.0</div>
+    <div class="tele-unit">DEG</div>
+  </div>
+  <div class="tele-cell">
+    <div class="tele-key">TILT ANG</div>
+    <div class="tele-big" id="tele-tilt-ang">070.0</div>
+    <div class="tele-unit">DEG</div>
+  </div>
+</div>
 
-    <!-- ── Col 2: Target + Controls ── -->
-    <div class="col">
-
-      <div class="panel">
-        <div class="panel-title">
-          Target
-          <span class="panel-title-accent" id="state-badge" class="s-idle">IDLE</span>
-        </div>
-
-        <div class="tele-grid">
-          <div class="tele-cell">
-            <div class="tele-cell-label">X · Y</div>
-            <div class="tele-cell-val" id="tele-pos">— · —</div>
-          </div>
-          <div class="tele-cell">
-            <div class="tele-cell-label">W × H</div>
-            <div class="tele-cell-val amber" id="tele-size">— × —</div>
-          </div>
-        </div>
-
-        <div class="tele-grid">
-          <div class="tele-cell">
-            <div class="tele-cell-label">PAN ERR</div>
-            <div class="tele-cell-val blue" id="tele-pan-err">+0</div>
-          </div>
-          <div class="tele-cell">
-            <div class="tele-cell-label">TILT ERR</div>
-            <div class="tele-cell-val blue" id="tele-tilt-err">+0</div>
-          </div>
-        </div>
-
-        <div>
-          <div class="bar-section-title" style="margin-bottom:5px">Error magnitude</div>
-          <div class="bar-row" style="margin-bottom:4px">
-            <span class="bar-label">PAN</span>
-            <div class="bar-track"><div class="bar-fill" id="bar-pan"></div></div>
-            <span class="bar-val" id="val-pan">0</span>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">TILT</span>
-            <div class="bar-track"><div class="bar-fill" id="bar-tilt"></div></div>
-            <span class="bar-val" id="val-tilt">0</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-title">Aim</div>
-        <canvas id="aim-canvas" width="233" height="150"></canvas>
-      </div>
-
-      <div class="panel">
-        <div class="panel-title">Controls</div>
-        <div class="btn-row">
-          <button id="btn-reset" onclick="resetTracker()">Reset</button>
-          <button id="btn-mouse" onclick="toggleMouse()">Mouse: OFF</button>
-        </div>
-        <div id="msg-bar"></div>
-      </div>
-
+<aside>
+  <div class="panel-section">
+    <div class="section-title">SERVO POSITION</div>
+    <div class="gauge-row">
+      <span class="gauge-label">PAN</span>
+      <div class="gauge-track"><div class="gauge-fill" id="pan-bar" style="width:0%;left:50%"></div></div>
+      <span class="gauge-val" id="pan-val">090.0°</span>
     </div>
-
-    <!-- ── Col 3: Servos + Controller ── -->
-    <div class="col">
-
-      <div class="panel">
-        <div class="panel-title">Servos</div>
-
-        <div class="servo-angles">
-          <div class="servo-angle-cell">
-            <div class="servo-angle-label">PAN</div>
-            <div class="servo-angle-val pan" id="sv-pan-big">90°</div>
-          </div>
-          <div class="servo-angle-cell">
-            <div class="servo-angle-label">TILT</div>
-            <div class="servo-angle-val tilt" id="sv-tilt-big">90°</div>
-          </div>
-        </div>
-
-        <div class="servo-bar-row" id="bar-sv-pan">
-          <span class="servo-bar-label">PAN</span>
-          <div class="servo-bar-track"><div class="servo-bar-fill" style="width:50%"></div></div>
-        </div>
-        <div class="servo-bar-row" id="bar-sv-tilt">
-          <span class="servo-bar-label">TILT</span>
-          <div class="servo-bar-track"><div class="servo-bar-fill" style="width:50%"></div></div>
-        </div>
-
-        <canvas id="servo-canvas" width="233" height="72" style="width:100%;display:block;margin-top:2px"></canvas>
-      </div>
-
-      <div class="panel" style="flex:1;min-height:0">
-        <div class="panel-title">
-          <span>Controller</span>
-          <span id="joy-status" style="color:var(--red);font-size:0.6rem;letter-spacing:2px">DISCONNECTED</span>
-        </div>
-        <canvas id="joy-canvas" width="233" height="110" style="width:100%;display:block"></canvas>
-        <div class="motor-row">
-          <span class="motor-label">L MTR</span>
-          <div class="motor-track"><div class="motor-fill" id="bar-lm"></div></div>
-          <span class="motor-val" id="val-lm">0%</span>
-        </div>
-        <div class="motor-row">
-          <span class="motor-label">R MTR</span>
-          <div class="motor-track"><div class="motor-fill" id="bar-rm"></div></div>
-          <span class="motor-val" id="val-rm">0%</span>
-        </div>
-        <div id="joy-name" style="font-size:0.55rem;color:var(--dim);text-align:center;letter-spacing:1px"></div>
-      </div>
-
+    <div class="gauge-row">
+      <span class="gauge-label">TILT</span>
+      <div class="gauge-track"><div class="gauge-fill" id="tilt-bar" style="width:0%;left:50%"></div></div>
+      <span class="gauge-val" id="tilt-val">070.0°</span>
     </div>
   </div>
 
-  <script>
-    // ── Stream ────────────────────────────────────────────────────────────
-    function onStreamOk() {
-      document.getElementById('live-dot').style.background = 'var(--green)';
-      document.getElementById('live-label').textContent = 'LIVE';
-    }
-    function onStreamErr() {
-      document.getElementById('live-dot').style.background = 'var(--red)';
-      document.getElementById('live-label').textContent = 'LOST';
-      setTimeout(() => { document.getElementById('feed').src = '/video?' + Date.now(); }, 3000);
-    }
+  <div class="panel-section">
+    <div class="section-title">CONTROLS</div>
+    <div class="btn-grid">
+      <button class="btn danger wide" id="btn-reset">⟳ ABORT / RESET</button>
+      <button class="btn wide" id="btn-mouse">◎ MOUSE AIM MODE</button>
+      <button class="btn" onclick="nudge('tilt',-6)">▲ TILT UP</button>
+      <button class="btn" onclick="nudge('tilt',+6)">▼ TILT DN</button>
+      <button class="btn" onclick="nudge('pan',-6)">◀ PAN L</button>
+      <button class="btn" onclick="nudge('pan',+6)">▶ PAN R</button>
+    </div>
+    <div style="margin-top:8px;font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim);line-height:1.5;">
+      CLICK FEED TO ACQUIRE TARGET<br>MOUSE MODE: CURSOR AIMS TURRET
+    </div>
+  </div>
 
-    // ── Aim canvas ────────────────────────────────────────────────────────
-    const ac = document.getElementById('aim-canvas');
-    const actx = ac.getContext('2d');
-    function drawAim(tx, ty, locked) {
-      const W = ac.width, H = ac.height;
-      actx.clearRect(0,0,W,H);
-      actx.strokeStyle = '#0d1a0d'; actx.lineWidth = 1;
-      for (let x=0;x<=W;x+=W/8){actx.beginPath();actx.moveTo(x,0);actx.lineTo(x,H);actx.stroke();}
-      for (let y=0;y<=H;y+=H/6){actx.beginPath();actx.moveTo(0,y);actx.lineTo(W,y);actx.stroke();}
-      actx.strokeStyle='#1a3a1a';actx.lineWidth=1;
-      actx.beginPath();actx.moveTo(W/2-14,H/2);actx.lineTo(W/2+14,H/2);actx.stroke();
-      actx.beginPath();actx.moveTo(W/2,H/2-14);actx.lineTo(W/2,H/2+14);actx.stroke();
-      actx.beginPath();actx.arc(W/2,H/2,5,0,Math.PI*2);actx.stroke();
-      if (!tx && !ty) return;
-      const px=(tx/640)*W, py=(ty/480)*H;
-      const color = locked ? '#ff8800' : '#00ff88';
-      actx.strokeStyle=locked?'rgba(255,136,0,.3)':'rgba(0,255,136,.25)';actx.lineWidth=1;
-      actx.beginPath();actx.moveTo(W/2,H/2);actx.lineTo(px,py);actx.stroke();
-      actx.fillStyle=color+'33';actx.beginPath();actx.arc(px,py,12,0,Math.PI*2);actx.fill();
-      actx.strokeStyle=color;actx.lineWidth=1.5;actx.beginPath();actx.arc(px,py,12,0,Math.PI*2);actx.stroke();
-      actx.fillStyle=color;actx.beginPath();actx.arc(px,py,3,0,Math.PI*2);actx.fill();
-    }
-    drawAim(0,0,false);
+  <div class="panel-section">
+    <div class="section-title">COLOR IFF</div>
+    <div class="color-row">
+      <div id="color-swatch"></div>
+      <div style="flex:1;">
+        <div class="color-conf-label">SIGNATURE MATCH</div>
+        <div class="color-bar-track"><div id="color-conf-bar"></div></div>
+        <div id="color-conf-val">NO TGT LEARNED</div>
+      </div>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim);line-height:1.4;">
+      ORANGE BOX = COLOR DRIFT<br>AUTO-REACQUIRE BY COLOR SIG
+    </div>
+  </div>
 
-    // ── Bar helpers ───────────────────────────────────────────────────────
-    function setBar(fillId, valId, error, maxErr) {
-      const pct = Math.min(Math.abs(error)/maxErr*100, 100);
-      const fill = document.getElementById(fillId);
-      fill.style.width = pct+'%';
-      fill.style.left  = error>=0 ? '50%' : (50-pct)+'%';
-      fill.style.background = pct<33?'var(--green)':pct<66?'var(--amber)':'var(--red)';
-      document.getElementById(valId).textContent = (error>=0?'+':'')+error;
-    }
-    function setServoAngle(bigId, barRowId, deg) {
-      document.getElementById(bigId).textContent = Math.round(deg)+'°';
-      const fill = document.querySelector('#'+barRowId+' .servo-bar-fill');
-      if (fill) fill.style.width = (deg/180*100)+'%';
-    }
-    function setMotorBar(fillId, valId, speed) {
-      const pct = Math.abs(speed)*100;
-      const fill = document.getElementById(fillId);
-      fill.style.width = pct+'%';
-      fill.style.left  = speed>=0?'50%':(50-pct)+'%';
-      fill.style.background = speed===0?'var(--dim)':pct>70?'var(--red)':'var(--green)';
-      document.getElementById(valId).textContent = (speed>=0?'+':'')+Math.round(speed*100)+'%';
-    }
+  <div class="panel-section">
+    <div class="section-title">GAMEPAD INPUT</div>
+    <div class="joy-grid">
+      <div class="joy-wrap">
+        <div class="joy-label">L-STICK</div>
+        <div class="joy-pad"><div class="joy-dot" id="joy-left-dot"></div></div>
+      </div>
+      <div class="joy-wrap">
+        <div class="joy-label">R-STICK</div>
+        <div class="joy-pad"><div class="joy-dot" id="joy-right-dot"></div></div>
+      </div>
+    </div>
+    <div id="joy-name" style="margin-top:5px;">NO GAMEPAD DETECTED</div>
+  </div>
 
-    // ── Servo arcs ────────────────────────────────────────────────────────
-    const sc = document.getElementById('servo-canvas');
-    const sctx = sc.getContext('2d');
-    function drawServoArcs(panDeg, tiltDeg) {
-      const W=sc.width, H=sc.height;
-      sctx.clearRect(0,0,W,H);
-      const arc=(cx,label,deg,color)=>{
-        const r=28, a=Math.PI-(deg/180)*Math.PI;
-        sctx.strokeStyle='#141a14';sctx.lineWidth=6;
-        sctx.beginPath();sctx.arc(cx,H-4,r,Math.PI,0);sctx.stroke();
-        sctx.strokeStyle=color+'66';sctx.lineWidth=4;
-        sctx.beginPath();sctx.arc(cx,H-4,r,Math.PI,a,true);sctx.stroke();
-        sctx.strokeStyle=color;sctx.lineWidth=2;
-        sctx.beginPath();sctx.arc(cx,H-4,r,Math.PI,a,true);sctx.stroke();
-        const nx=cx+r*Math.cos(a),ny=(H-4)+r*Math.sin(a);
-        sctx.strokeStyle='#fff';sctx.lineWidth=2;
-        sctx.beginPath();sctx.moveTo(cx,H-4);sctx.lineTo(nx,ny);sctx.stroke();
-        sctx.fillStyle=color;sctx.font='bold 9px monospace';
-        sctx.fillText(Math.round(deg)+'°',cx-12,H-4-r-5);
-        sctx.fillStyle='#555';sctx.font='8px monospace';sctx.fillText(label,cx-8,H+8);
-      };
-      arc(58,  'PAN',  panDeg,  '#4488ff');
-      arc(175, 'TILT', tiltDeg, '#44ddaa');
-    }
-    drawServoArcs(90, 90);
+  <div class="panel-section" style="flex:1;">
+    <div class="section-title">SYSTEM LOG</div>
+    <div id="log-box">
+      <div>&gt; SYSTEM BOOT OK</div>
+      <div>&gt; AWAITING TARGET ACQUISITION...</div>
+    </div>
+  </div>
+</aside>
 
-    // ── Joystick canvas ───────────────────────────────────────────────────
-    const jc = document.getElementById('joy-canvas');
-    const jctx = jc.getContext('2d');
-    function drawStick(cx,cy,r,sx,sy,color){
-      jctx.strokeStyle='#1e2e1e';jctx.lineWidth=2;
-      jctx.beginPath();jctx.arc(cx,cy,r,0,Math.PI*2);jctx.stroke();
-      jctx.strokeStyle='#162216';jctx.lineWidth=1;
-      jctx.beginPath();jctx.moveTo(cx-r,cy);jctx.lineTo(cx+r,cy);jctx.stroke();
-      jctx.beginPath();jctx.moveTo(cx,cy-r);jctx.lineTo(cx,cy+r);jctx.stroke();
-      const dx=cx+sx*r*0.78, dy=cy-sy*r*0.78;
-      jctx.fillStyle=color+'33';jctx.beginPath();jctx.arc(dx,dy,r*0.3,0,Math.PI*2);jctx.fill();
-      jctx.strokeStyle=color;jctx.lineWidth=2;jctx.beginPath();jctx.arc(dx,dy,r*0.3,0,Math.PI*2);jctx.stroke();
-    }
-    function drawTrigger(x,y,w,h,val,label){
-      jctx.fillStyle='#0d1a0d';jctx.fillRect(x,y,w,h);
-      jctx.fillStyle=val>0.05?'#88ff44':'#1e2e1e';jctx.fillRect(x,y+h*(1-val),w,h*val);
-      jctx.strokeStyle='#1e2e1e';jctx.lineWidth=1;jctx.strokeRect(x,y,w,h);
-      jctx.fillStyle='#444';jctx.font='7px monospace';jctx.fillText(label,x,y+h+9);
-    }
-    function drawController(lx,ly,rx,ry,lt,rt,connected){
-      jctx.clearRect(0,0,jc.width,jc.height);
-      const color=connected?'#00ff88':'#2a3a2a';
-      drawTrigger(8,8,11,38,lt,'LT');
-      drawTrigger(214,8,11,38,rt,'RT');
-      drawStick(68, 58, 36, lx, ly, color);
-      drawStick(165,58, 36, rx, ry, color);
-    }
-    drawController(0,0,0,0,0,0,false);
+<script>
+let mouseMode = false, mouseThrottle = 0, lastState = '';
+const videoWrap = document.getElementById('video-wrap');
+const cam       = document.getElementById('cam');
+const overlay   = document.getElementById('click-overlay');
+const reticle   = document.getElementById('mouse-reticle');
+const logBox    = document.getElementById('log-box');
+const btnMouse  = document.getElementById('btn-mouse');
 
-    // ── Status poll ───────────────────────────────────────────────────────
+function syslog(msg, type) {
+  const d  = document.createElement('div');
+  const ts = new Date().toISOString().slice(11,19);
+  d.textContent = `> [${ts}Z] ${msg}`;
+  d.style.color = type === 'lock'   ? 'var(--green-bright)' :
+                  type === 'danger' ? 'var(--red-bright)'   :
+                  type === 'warn'   ? 'var(--amber-glow)'   : 'var(--text-dim)';
+  logBox.appendChild(d);
+  logBox.scrollTop = logBox.scrollHeight;
+  while (logBox.children.length > 80) logBox.removeChild(logBox.firstChild);
+}
+
+function updateClock() {
+  document.getElementById('hdr-clock').textContent = new Date().toISOString().slice(11,19)+'Z';
+}
+setInterval(updateClock, 1000); updateClock();
+
+videoWrap.addEventListener('click', e => {
+  if (mouseMode) return;
+  const rect = cam.getBoundingClientRect();
+  const nx = (e.clientX - rect.left) / rect.width;
+  const ny = (e.clientY - rect.top)  / rect.height;
+  if (nx < 0 || nx > 1 || ny < 0 || ny > 1) return;
+  const fl = document.createElement('div');
+  fl.className = 'click-flash';
+  fl.style.left = (e.clientX - rect.left) + 'px';
+  fl.style.top  = (e.clientY - rect.top)  + 'px';
+  overlay.appendChild(fl);
+  fl.addEventListener('animationend', () => fl.remove());
+  fetch('/click-lock', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({x:nx,y:ny})});
+  syslog(`CLICK-LOCK @ (${Math.round(nx*640)}, ${Math.round(ny*480)})`, 'lock');
+});
+
+videoWrap.addEventListener('mousemove', e => {
+  if (!mouseMode) return;
+  const rect = cam.getBoundingClientRect();
+  const nx = Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+  const ny = Math.max(0,Math.min(1,(e.clientY-rect.top)/rect.height));
+  reticle.style.left = (e.clientX-rect.left)+'px';
+  reticle.style.top  = (e.clientY-rect.top)+'px';
+  const now = Date.now();
+  if (now-mouseThrottle < 33) return;
+  mouseThrottle = now;
+  fetch('/mouse-move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({x:nx,y:ny})});
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  fetch('/reset',{method:'POST'});
+  syslog('ABORT CMD SENT — RESET TO IDLE', 'danger');
+});
+
+btnMouse.addEventListener('click', () => {
+  fetch('/mouse-toggle',{method:'POST'}).then(r=>r.json()).then(d=>{
+    mouseMode = d.mouse_control;
+    btnMouse.classList.toggle('active-btn', mouseMode);
+    btnMouse.textContent = mouseMode ? '✕ DISENGAGE MOUSE' : '◎ MOUSE AIM MODE';
+    reticle.style.display = mouseMode ? 'block' : 'none';
+    syslog(mouseMode ? 'MOUSE AIM MODE ENGAGED' : 'MOUSE AIM DISENGAGED', 'warn');
+  });
+});
+
+function nudge(axis, deg) {
+  fetch('/servo-nudge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({axis,degrees:deg})});
+}
+
+function setGauge(bar, angle) {
+  const off = ((angle-90)/90)*50;
+  if (off>=0){bar.style.left='50%';bar.style.width=off+'%';}
+  else{bar.style.left=(50+off)+'%';bar.style.width=Math.abs(off)+'%';}
+}
+
+function setErrFill(neg, pos, err) {
+  const pct = Math.min(50, Math.abs(err)/3.2);
+  if (err>=0){pos.style.width=pct+'%';neg.style.width='0%';}
+  else{neg.style.width=pct+'%';pos.style.width='0%';}
+}
+
+let lastFpsTs=Date.now(), frameCount=0;
+cam.addEventListener('load',()=>frameCount++);
+setInterval(()=>{
+  const now=Date.now();
+  document.getElementById('fps-val').textContent=Math.round(frameCount/((now-lastFpsTs)/1000))||'--';
+  frameCount=0;lastFpsTs=now;
+},1000);
+
+async function pollStatus() {
+  try {
+    const d = await fetch('/status').then(r=>r.json());
     const badge = document.getElementById('state-badge');
-    const msg   = document.getElementById('msg-bar');
 
-    async function poll() {
-      try {
-        const d = await fetch('/status').then(r=>r.json());
-        const {state,pan_err,tilt_err,tx,ty,tw,th,pan_angle,tilt_angle} = d;
-        badge.className='s-'+state; badge.textContent=state.toUpperCase();
-        const has=tw>0;
-        document.getElementById('tele-pos').textContent  = has?`${tx} · ${ty}`:'— · —';
-        document.getElementById('tele-size').textContent = has?`${tw} × ${th}`:'— × —';
-        document.getElementById('tele-pan-err').textContent  = (pan_err>=0?'+':'')+pan_err;
-        document.getElementById('tele-tilt-err').textContent = (tilt_err>=0?'+':'')+tilt_err;
-        setBar('bar-pan','val-pan',pan_err,320);
-        setBar('bar-tilt','val-tilt',tilt_err,240);
-        drawAim(has?tx:0,has?ty:0,state==='locked');
-        setServoAngle('sv-pan-big','bar-sv-pan',pan_angle);
-        setServoAngle('sv-tilt-big','bar-sv-tilt',tilt_angle);
-        drawServoArcs(pan_angle,tilt_angle);
-        if(state==='searching') msg.textContent='Re-acquiring...';
-        else if(state==='idle'&&msg.textContent==='Re-acquiring...') msg.textContent='Lost.';
-      } catch(_) {}
-      setTimeout(poll,400);
-    }
-    poll();
+    // State badge — append chassis indicator if rotating
+    const chassisTag = d.chassis_turning ? ` ◀▶ ${d.chassis_turning.toUpperCase()}` : '';
+    badge.className  = 'badge-'+d.state + (d.chassis_turning ? ' badge-chassis' : '');
+    badge.textContent = d.state.toUpperCase() + chassisTag;
 
-    document.getElementById('feed').addEventListener('click', async function(e) {
-      if (mouseOn) return;
-      const rect = this.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = (e.clientY - rect.top)  / rect.height;
-      msg.textContent = 'Locking…';
-      await fetch('/click-lock', {method:'POST', headers:{'Content-Type':'application/json'},
-                                  body: JSON.stringify({x, y})});
-      await new Promise(r => setTimeout(r, 500));
-      const {state} = await fetch('/status').then(r=>r.json());
-      msg.textContent = state==='locked' ? 'Locked.' : 'Lock failed — try again.';
-    });
-
-    async function pollJoy() {
-      try {
-        const {lx,ly,rx,ry,lt,rt,connected,name} = await fetch('/joystick').then(r=>r.json());
-        const el=document.getElementById('joy-status');
-        el.textContent=connected?'CONNECTED':'DISCONNECTED';
-        el.style.color=connected?'var(--green)':'var(--red)';
-        document.getElementById('joy-name').textContent=name;
-        drawController(lx,ly,rx,ry,lt,rt,connected);
-        setMotorBar('bar-lm','val-lm',ly);
-        setMotorBar('bar-rm','val-rm',ry);
-      } catch(_) {}
-      setTimeout(pollJoy,100);
-    }
-    pollJoy();
-
-    async function resetTracker() {
-      await fetch('/reset',{method:'POST'});
-      msg.textContent='Reset.';
+    if (d.state !== lastState) {
+      const t = d.state==='locked'?'lock':d.state==='searching'?'warn':
+                d.state==='idle'?'danger':'';
+      const msg = d.state==='idle'
+        ? 'IDLE — CLICK TARGET IN FEED TO LOCK'
+        : 'STATE → '+d.state.toUpperCase();
+      syslog(msg, t);
+      lastState = d.state;
     }
 
-    // ── Mouse control ─────────────────────────────────────────────────────
-    let mouseOn = false;
-    let lastMouseSend = 0;
-    const feedEl  = document.getElementById('feed');
-    const mouseOv = document.getElementById('mouse-overlay');
-    const mouseCtx= mouseOv.getContext('2d');
-
-    function drawCrosshair(px, py) {
-      const W = feedEl.offsetWidth, H = feedEl.offsetHeight;
-      if (mouseOv.width !== W)  mouseOv.width  = W;
-      if (mouseOv.height !== H) mouseOv.height = H;
-      mouseCtx.clearRect(0, 0, W, H);
-      mouseCtx.strokeStyle = 'rgba(255,136,0,0.9)';
-      mouseCtx.lineWidth = 1.5;
-      const r = 12;
-      mouseCtx.beginPath();
-      mouseCtx.moveTo(px-r-8,py); mouseCtx.lineTo(px-4,py);
-      mouseCtx.moveTo(px+4,py);   mouseCtx.lineTo(px+r+8,py);
-      mouseCtx.moveTo(px,py-r-8); mouseCtx.lineTo(px,py-4);
-      mouseCtx.moveTo(px,py+4);   mouseCtx.lineTo(px,py+r+8);
-      mouseCtx.stroke();
-      mouseCtx.strokeStyle = 'rgba(255,136,0,0.6)';
-      mouseCtx.lineWidth = 1;
-      mouseCtx.beginPath(); mouseCtx.arc(px, py, r, 0, Math.PI*2); mouseCtx.stroke();
-      mouseCtx.fillStyle = 'rgba(255,136,0,0.3)';
-      mouseCtx.beginPath(); mouseCtx.arc(px, py, 3, 0, Math.PI*2); mouseCtx.fill();
+    // Chassis rotation event logging
+    if (d.chassis_turning && !window._lastChassis) {
+      syslog('CHASSIS ROTATING '+d.chassis_turning.toUpperCase(), 'warn');
+    } else if (!d.chassis_turning && window._lastChassis) {
+      syslog('CHASSIS STOP — RECENTRED', '');
     }
+    window._lastChassis = d.chassis_turning;
 
-    async function toggleMouse() {
-      const {mouse_control} = await fetch('/mouse-toggle',{method:'POST'}).then(r=>r.json());
-      mouseOn = mouse_control;
-      const btn = document.getElementById('btn-mouse');
-      btn.textContent = 'Mouse: '+(mouseOn?'ON':'OFF');
-      btn.classList.toggle('active', mouseOn);
-      mouseOv.style.display = mouseOn ? 'block' : 'none';
-      feedEl.style.cursor   = mouseOn ? 'none'  : 'crosshair';
-      if (mouseOn) { mouseOv.width = feedEl.offsetWidth; mouseOv.height = feedEl.offsetHeight; }
-      else mouseCtx.clearRect(0,0,mouseOv.width,mouseOv.height);
+    // IDLE overlay hint on video
+    const idleHint = document.getElementById('idle-hint');
+    if (idleHint) idleHint.style.display = d.state==='idle' ? 'flex' : 'none';
+
+    const hasTgt = d.tw > 0;
+    document.getElementById('tele-tx').textContent = hasTgt ? String(d.tx).padStart(3,'0') : '---';
+    document.getElementById('tele-ty').textContent = hasTgt ? String(d.ty).padStart(3,'0') : '---';
+
+    const pe=d.pan_err, te=d.tilt_err;
+    const peEl=document.getElementById('tele-pan-err');
+    const teEl=document.getElementById('tele-tilt-err');
+    peEl.textContent=(pe>=0?'+':'')+String(Math.abs(pe)).padStart(3,'0');
+    teEl.textContent=(te>=0?'+':'')+String(Math.abs(te)).padStart(3,'0');
+    peEl.className='tele-big amber'+(Math.abs(pe)>80?' red':'');
+    teEl.className='tele-big amber'+(Math.abs(te)>80?' red':'');
+    setErrFill(document.getElementById('terr-pan-neg'),document.getElementById('terr-pan-pos'),pe);
+    setErrFill(document.getElementById('terr-tilt-neg'),document.getElementById('terr-tilt-pos'),te);
+
+    document.getElementById('tele-pan-ang').textContent=d.pan_angle.toFixed(1).padStart(5,'0');
+    document.getElementById('tele-tilt-ang').textContent=d.tilt_angle.toFixed(1).padStart(5,'0');
+
+    setGauge(document.getElementById('pan-bar'),d.pan_angle);
+    setGauge(document.getElementById('tilt-bar'),d.tilt_angle);
+    document.getElementById('pan-val').textContent=d.pan_angle.toFixed(1)+'°';
+    document.getElementById('tilt-val').textContent=d.tilt_angle.toFixed(1)+'°';
+
+    const swatch=document.getElementById('color-swatch');
+    const cbar=document.getElementById('color-conf-bar');
+    const cval=document.getElementById('color-conf-val');
+    if (d.color_rgb){
+      const[r,g,b]=d.color_rgb;
+      swatch.style.background=`rgb(${r},${g},${b})`;
+      swatch.style.boxShadow=`0 0 14px rgba(${r},${g},${b},0.65)`;
+    } else {
+      swatch.style.background='#111208'; swatch.style.boxShadow='none';
     }
+    const pct=Math.round((d.color_score||0)*100);
+    cbar.style.width=pct+'%';
+    cbar.style.background=pct>60?'var(--green-ph)':pct>40?'var(--amber)':'var(--red-alert)';
+    cval.textContent=d.color_rgb?pct+'% MATCH':'NO TGT LEARNED';
 
-    feedEl.addEventListener('mousemove', function(e) {
-      const rect = feedEl.getBoundingClientRect();
-      const x = Math.max(0, Math.min(1, (e.clientX-rect.left)/rect.width));
-      const y = Math.max(0, Math.min(1, (e.clientY-rect.top) /rect.height));
-      if (mouseOn) {
-        drawCrosshair(x*feedEl.offsetWidth, y*feedEl.offsetHeight);
-        const now = Date.now();
-        if (now - lastMouseSend >= 50) {
-          lastMouseSend = now;
-          fetch('/mouse-move',{method:'POST',headers:{'Content-Type':'application/json'},
-                               body:JSON.stringify({x,y})});
-        }
-      }
-    });
+    mouseMode=d.mouse_control;
+    btnMouse.classList.toggle('active-btn',mouseMode);
+    reticle.style.display=mouseMode?'block':'none';
+  } catch(_){}
+}
 
-    feedEl.addEventListener('mouseleave', function() {
-      if (!mouseOn) return;
-      mouseCtx.clearRect(0,0,mouseOv.width,mouseOv.height);
-      fetch('/mouse-move',{method:'POST',headers:{'Content-Type':'application/json'},
-                           body:JSON.stringify({x:0.5,y:0.5})});
-    });
-  </script>
+async function pollJoystick() {
+  try {
+    const d=await fetch('/joystick').then(r=>r.json());
+    const moveDot=(id,nx,ny)=>{
+      const el=document.getElementById(id);
+      el.style.left=(50+nx*42)+'%'; el.style.top=(50+ny*42)+'%';
+    };
+    moveDot('joy-left-dot',d.lx,-d.ly);
+    moveDot('joy-right-dot',d.rx,-d.ry);
+    document.getElementById('joy-name').textContent=d.connected?d.name.toUpperCase():'NO GAMEPAD DETECTED';
+  } catch(_){}
+}
+
+setInterval(pollStatus,120);
+setInterval(pollJoystick,250);
+pollStatus();
+</script>
 </body>
 </html>
