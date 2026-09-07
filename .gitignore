@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+
+# the project site lives in its own repo: github.com/Davb0/skebob-site
+web/

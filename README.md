@@ -53,6 +53,16 @@ this was the hard part
 - the lidar gives a 360 scan for the radar and tells you how far the closest thing in
   front is
 
+all the numbers are in `backend/config.py` (PID gains tracker thresholds camera indexes
+frame size chassis angles) so you dont have to dig through the code
+
+## running it
+
+```bash
+pip install -r requirements.txt
+python backend/main.py     # http://localhost:8000
+python app/main.py         # set ROBOT_HOST if its on another pc
+```
 
 everything runs on a laptop for now. the motors and servos are fake and just keep track
 of what the numbers would be and the lidar is simulated and the cameras go to a test
@@ -65,3 +75,7 @@ pattern if nothing is plugged in. that way you can work on the code without the 
 - real RPLIDAR instead of the simulated one (`LIDAR_SIMULATED = False`)
 - autonomous driving because right now you still drive it yourself
 - the airsoft launcher on the turret and figuring out how to aim at stuff in the air
+
+the files still in the root folder (tracker.py camera.py chassis.py motor.py arduino.ino
+templates/) are the old raspberry pi + arduino version that had a website instead of an
+app. they're only there for reference. dont run main.py from the root it crashes

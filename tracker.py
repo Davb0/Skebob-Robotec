@@ -28,9 +28,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 import cv2
 
-cv2.setNumThreads(
-    4
-)  # Force OpenCV to use all 4 cores on the Pi internal C++ processing
+cv2.setNumThreads(4)  # Pi 4B has 4 cores; let OpenCV use them for C++ ops
 
 # -- Adafruit PCA9685 / servo -----------------------------------------------
 import board
@@ -54,6 +52,11 @@ except ImportError:
 # -- Pygame (joystick only) -------------------------------------------------
 import pygame
 
+# Pre-built structuring elements so hot loops don't allocate on every frame
+_KERNEL_5x5  = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+_KERNEL_7x7  = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+_KERNEL_5x5_BP = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))  # backproject
+
 # ===========================================================================
 # Configuration -- all tunable knobs in one place
 # ===========================================================================
@@ -65,7 +68,7 @@ class Cfg:
     FRAME_H = 360  # Reduced from 480
     FRAME_RATE = 20  # Reduced from 30
     JPEG_QUALITY = 30  # Reduced from 60
-    STREAM_MAX_FPS = 20  # Matches frame rate
+    STREAM_MAX_FPS = 40  # Matches frame rate
 
     # Servo channels  (PCA9685)
     PAN_CH = 0
@@ -444,9 +447,8 @@ def _best_blob(
     last_area: Optional[float] = None,
     max_jump: int = Cfg.MAX_JUMP_PX,
 ) -> Optional[Tuple[int, int, int, int, int, int, float]]:
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    clean = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, kernel, iterations=2)
-    clean = cv2.dilate(clean, kernel, iterations=2)
+    clean = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, _KERNEL_5x5, iterations=1)
+    clean = cv2.dilate(clean, _KERNEL_5x5, iterations=1)
 
     contours, _ = cv2.findContours(clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     candidates = []
@@ -571,8 +573,7 @@ class ColorMemory:
             return np.zeros((Cfg.FRAME_H, Cfg.FRAME_W), dtype=np.uint8)
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         bp = cv2.calcBackProject([hsv], [0, 1], self._hist, self._ranges, 1)
-        disc = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
-        cv2.filter2D(bp, -1, disc, bp)
+        cv2.filter2D(bp, -1, _KERNEL_5x5_BP, bp)
         return bp
 
     def find_in_frame(
@@ -594,8 +595,7 @@ class ColorMemory:
             bp_search = bp
 
         _, thresh = cv2.threshold(bp_search, 60, 255, cv2.THRESH_BINARY)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-        thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+        thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, _KERNEL_7x7)
         contours, _ = cv2.findContours(
             thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
         )
@@ -787,14 +787,15 @@ def _camera_capture_thread() -> None:
         raw = cam.capture_array()
         frame = cv2.rotate(cv2.cvtColor(raw, cv2.COLOR_RGB2BGR), cv2.ROTATE_180)
 
-        # Dispatch to both threads, dropping the oldest frame if busy
-        for q in (_vision_frame_q, _control_frame_q):
+        # vision_loop gets the original; control_loop gets a copy it can annotate
+        # without corrupting the frame that vision is reading (real data race).
+        for q, f in ((_vision_frame_q, frame), (_control_frame_q, frame.copy())):
             if q.full():
                 try:
                     q.get_nowait()
                 except queue.Empty:
                     pass
-            q.put(frame)
+            q.put(f)
 
 
 def vision_loop() -> None:
@@ -809,9 +810,11 @@ def vision_loop() -> None:
     search_count = 0
     color_dist = 1.0
     search_bg = _make_bg_sub()
+    _frame_n = 0
 
     while True:
         frame = _vision_frame_q.get()
+        _frame_n += 1
 
         with _state_lock:
             do_click = _state.cmd_click
@@ -860,7 +863,8 @@ def vision_loop() -> None:
                 box = (x, y, w, h)
 
                 if color_mem.has_color:
-                    color_dist = color_mem.distance(frame, x, y, w, h)
+                    if _frame_n % 2 == 0:
+                        color_dist = color_mem.distance(frame, x, y, w, h)
                     if color_dist > Cfg.COLOR_DRIFT_THRESH:
                         hit = color_mem.find_in_frame(
                             frame,
@@ -1044,9 +1048,7 @@ def _jpeg_encode_thread() -> None:
     while True:
         frame = _annotated_frame_q.get()
         ok, buf = cv2.imencode(
-            ".jpg",
-            frame,
-            [cv2.IMWRITE_JPEG_QUALITY, Cfg.JPEG_QUALITY, cv2.IMWRITE_JPEG_OPTIMIZE, 1],
+            ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, Cfg.JPEG_QUALITY]
         )
         if ok:
             with _frame_condition:
