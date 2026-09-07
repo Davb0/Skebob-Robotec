@@ -1,4 +1,4 @@
-# Skebob-Robotec
+# Skebob-Defense
 
 Skebob is a robot that follows things with a camera. Two cameras on a pan tilt turret
 and two motors for driving and a laptop app you use to control it. You click on
