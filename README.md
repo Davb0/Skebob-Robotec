@@ -1,6 +1,6 @@
-# Skebob-Defense
+# Project Talos
 
-Skebob is a robot that follows things with a camera. Two cameras on a pan tilt turret
+Talos is a robot that follows things with a camera. Two cameras on a pan tilt turret
 and two motors for driving and a laptop app you use to control it. You click on
 something in the video and after that the robot tries to keep it in the middle of the
 screen. The turret follows it by itself and if the target gets too far to the side then
